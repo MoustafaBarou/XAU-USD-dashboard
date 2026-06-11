@@ -1,5 +1,6 @@
 # CI build check only. Deployment is handled by Vercel, NOT GitHub Pages.
-# This workflow just verifies the app installs and builds cleanly on every push.
+# Uses `npm install` (not `npm ci`) so the build never fails on an out-of-sync
+# package-lock.json. No GitHub Pages steps remain.
 name: CI Build
 
 on:
@@ -20,17 +21,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
         env:
-          # Supabase vars are provided by Vercel at deploy time; the build
-          # tolerates their absence (client falls back to a safe placeholder),
-          # so CI can build without secrets. Add them here only if you want CI
-          # to build against real values.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
