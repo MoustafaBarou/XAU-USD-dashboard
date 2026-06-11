@@ -48,16 +48,24 @@ async function fetchEvents(): Promise<CalEvent[]> {
   if (!res.ok) throw new Error(`Calendar HTTP ${res.status}`);
   const arr = await res.json();
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
-  return arr.map((e: Record<string, unknown>, i: number) => ({
-    id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
-    date: parseJbDate(e.Date),
-    currency: String(e.Currency ?? '-'),
-    event: String(e.Name ?? 'Unknown event'),
-    impact: normalizeImpact(e.Impact),
-    actual: val(e.Actual),
-    estimate: val(e.Forecast),
-    previous: val(e.Previous),
-  }));
+  return arr.map((e: Record<string, unknown>, i: number) => {
+    const date = parseJbDate(e.Date);
+    // JBlanked returns 0 (not null) for the actual of events that have not been
+    // released yet. Any event still in the future cannot have an actual, so we
+    // treat it as pending (null) regardless of the placeholder value.
+    const isFuture = date !== '' && new Date(date).getTime() > Date.now();
+    const rawActual = val(e.Actual);
+    return {
+      id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
+      date,
+      currency: String(e.Currency ?? '-'),
+      event: String(e.Name ?? 'Unknown event'),
+      impact: normalizeImpact(e.Impact),
+      actual: isFuture ? null : rawActual,
+      estimate: val(e.Forecast),
+      previous: val(e.Previous),
+    };
+  });
 }
 
 /** Shared hook: fetches the 7-day calendar via the proxy and refreshes it. */
