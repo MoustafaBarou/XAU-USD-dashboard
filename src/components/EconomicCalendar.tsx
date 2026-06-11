@@ -62,9 +62,13 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
   const mapped = arr.map((e: Record<string, unknown>, i: number) => {
     const date = parseJbDate(e.Date);
-    // Future events have not been released yet; JBlanked sends 0 as a
-    // placeholder for their actual, so treat it as pending (null).
-    const isFuture = date !== '' && new Date(date).getTime() > Date.now();
+    // An actual is only real once JBlanked has released the event. It sends 0 as
+    // a placeholder before release, so we require the event to be in the past
+    // AND the Outcome field to be populated (JBlanked fills it post-release).
+    const outcome = String(e.Outcome ?? '').trim();
+    const isPast = date !== '' && new Date(date).getTime() <= Date.now();
+    const hasOutcome = outcome !== '' && outcome.toLowerCase() !== 'none';
+    const released = isPast && hasOutcome;
     const rawActual = val(e.Actual);
     return {
       id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
@@ -73,7 +77,7 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
       country: String(e.Currency ?? '-'),
       event: String(e.Name ?? 'Unknown event'),
       impact: normalizeImpact(e.Impact),
-      actual: isFuture ? null : rawActual,
+      actual: released ? rawActual : null,
       estimate: val(e.Forecast),
       previous: val(e.Previous),
     };
