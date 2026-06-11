@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useEconomicCalendar, nextHighImpact } from '../hooks/useEconomicCalendar';
 import { computeMarketMood, moodColor, moodLabel } from '../lib/marketMood';
 import { EventCountdown } from './EventCountdown';
+import { fmtAmsTime, amsZoneLabel } from '../lib/time';
 
 export function DashboardMood() {
   const cal = useEconomicCalendar();
@@ -23,8 +24,7 @@ export function DashboardMood() {
   const marker = mood.score >= 60 ? '🟢' : mood.score <= 39 ? '🔴' : '🟡';
   const confidence = Math.min(100, Math.round(Math.abs(mood.score - 50) * 2));
 
-  const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  const fmtTime = (iso: string) => fmtAmsTime(iso);
 
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -60,7 +60,7 @@ export function DashboardMood() {
               <span className="text-[18px]">🔴</span>
               <span className="font-sora font-800 text-[18px] text-txt">{nextHi.currency} {nextHi.event}</span>
             </div>
-            <div className="text-[12px] text-muted mt-1 tnum">{fmtTime(nextHi.date)} UTC</div>
+            <div className="text-[12px] text-muted mt-1 tnum">{fmtTime(nextHi.date)} {amsZoneLabel(nextHi.date)}</div>
             <div className="mt-4">
               <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Starts in</div>
               <EventCountdown target={nextHi.date} className="font-sora font-800 text-[28px] text-gold" />
