@@ -46,14 +46,24 @@ export interface Profile {
 export interface JournalEntry {
   id: string;
   user_id: string;
-  date: string;          // date
-  bias: string | null;
+  date: string | null;          // entry date/datetime (ISO)
+  bias: string | null;          // legacy; kept in sync with direction
   setup: string | null;
-  entry: number | null;
-  exit: number | null;
-  result: string | null;
-  lessons: string | null;
+  entry: number | null;         // legacy; kept in sync with entry_price
+  exit: number | null;          // legacy; kept in sync with exit_price
+  result: string | null;        // stores computed Net P/L as text
+  lessons: string | null;       // legacy; kept in sync with notes
   created_at: string;
+  instrument: string | null;
+  direction: string | null;     // 'Long' | 'Short'
+  entry_price: number | null;
+  exit_price: number | null;
+  quantity: number | null;
+  stop_loss: number | null;
+  take_profit: number | null;
+  fees: number | null;
+  exit_date: string | null;     // ISO
+  notes: string | null;
 }
 
 export interface WatchlistItem {
