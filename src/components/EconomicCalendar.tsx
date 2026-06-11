@@ -23,6 +23,9 @@ type FetchState =
   | { status: 'ok'; events: EconEvent[] };
 
 const FMP_KEY = import.meta.env.VITE_FMP_API_KEY as string | undefined;
+// JBlanked: free economic calendar (Forex Factory / MQL5 / FxStreet sources).
+// Get a key at https://www.jblanked.com/api/key/  (free tier is rate-limited).
+const JBLANKED_KEY = import.meta.env.VITE_JBLANKED_API_KEY as string | undefined;
 
 const CURRENCIES = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'] as const;
 const IMPACTS: Impact[] = ['High', 'Medium', 'Low'];
@@ -48,35 +51,81 @@ function val(v: unknown): number | string | null {
   return typeof v === 'number' ? v : String(v);
 }
 
-// ── Data fetch (FMP /stable, fallback /api/v3) ────────────────────────────
-async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[]> {
+// JBlanked dates look like "2024.02.08 15:30:00" (UTC). Convert to ISO.
+function parseJbDate(s: unknown): string {
+  const str = String(s ?? '');
+  const iso = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})\s+(.+)$/, '$1-$2-$3T$4Z');
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
+}
+
+// ── Source 1: JBlanked (free, Forex Factory data) ─────────────────────────
+async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[]> {
+  const url = `https://www.jblanked.com/news/api/forex-factory/calendar/range/?from=${fromISO}&to=${toISO}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', Authorization: `Api-Key ${JBLANKED_KEY}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`JBlanked HTTP ${res.status}`);
+  const arr = await res.json();
+  if (!Array.isArray(arr)) throw new Error('JBlanked: unexpected response');
+  return arr.map((e: Record<string, unknown>, i: number) => ({
+    id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
+    date: parseJbDate(e.Date),
+    currency: String(e.Currency ?? '—'),
+    country: String(e.Currency ?? '—'),
+    event: String(e.Name ?? 'Unknown event'),
+    impact: normalizeImpact(e.Impact),
+    actual: val(e.Actual),
+    estimate: val(e.Forecast),
+    previous: val(e.Previous),
+  }));
+}
+
+// ── Source 2: FMP (works only on plans that include the economic calendar) ─
+async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const endpoints = [
     `https://financialmodelingprep.com/stable/economic-calendar?from=${fromISO}&to=${toISO}&apikey=${FMP_KEY}`,
     `https://financialmodelingprep.com/api/v3/economic_calendar?from=${fromISO}&to=${toISO}&apikey=${FMP_KEY}`,
   ];
   let lastErr = '';
   for (const url of endpoints) {
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
-      const arr = await res.json();
-      if (!Array.isArray(arr)) { lastErr = 'Unexpected response'; continue; }
-      return arr.map((e: Record<string, unknown>, i: number) => ({
-        id: `${e.event ?? 'evt'}-${e.date ?? i}-${i}`,
-        date: String(e.date ?? ''),
-        currency: String(e.currency ?? e.country ?? '—'),
-        country: String(e.country ?? e.currency ?? '—'),
-        event: String(e.event ?? 'Unknown event'),
-        impact: normalizeImpact(e.impact),
-        actual: val(e.actual),
-        estimate: val(e.estimate),
-        previous: val(e.previous),
-      }));
-    } catch (err) {
-      lastErr = err instanceof Error ? err.message : 'fetch failed';
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      lastErr = res.status === 403
+        ? 'FMP 403 — your plan does not include the economic calendar.'
+        : `FMP HTTP ${res.status}`;
+      continue;
     }
+    const arr = await res.json();
+    if (!Array.isArray(arr)) { lastErr = 'FMP: unexpected response'; continue; }
+    return arr.map((e: Record<string, unknown>, i: number) => ({
+      id: `${e.event ?? 'evt'}-${e.date ?? i}-${i}`,
+      date: String(e.date ?? ''),
+      currency: String(e.currency ?? e.country ?? '—'),
+      country: String(e.country ?? e.currency ?? '—'),
+      event: String(e.event ?? 'Unknown event'),
+      impact: normalizeImpact(e.impact),
+      actual: val(e.actual),
+      estimate: val(e.estimate),
+      previous: val(e.previous),
+    }));
   }
-  throw new Error(lastErr || 'fetch failed');
+  throw new Error(lastErr || 'FMP fetch failed');
+}
+
+// Try JBlanked first (free), then FMP. Surfaces a clear message if both fail.
+async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[]> {
+  const errors: string[] = [];
+  if (JBLANKED_KEY) {
+    try { return await fetchJBlanked(fromISO, toISO); }
+    catch (e) { errors.push(e instanceof Error ? e.message : 'JBlanked failed'); }
+  }
+  if (FMP_KEY) {
+    try { return await fetchFmp(fromISO, toISO); }
+    catch (e) { errors.push(e instanceof Error ? e.message : 'FMP failed'); }
+  }
+  throw new Error(errors.join(' · ') || 'No data source available');
 }
 
 export function EconomicCalendar() {
@@ -86,7 +135,7 @@ export function EconomicCalendar() {
   const [impacts, setImpacts] = useState<Set<Impact>>(new Set(IMPACTS));
 
   const load = useCallback(async () => {
-    if (!FMP_KEY) { setState({ status: 'no-key' }); return; }
+    if (!JBLANKED_KEY && !FMP_KEY) { setState({ status: 'no-key' }); return; }
     setState({ status: 'loading' });
     try {
       const from = new Date();
@@ -176,7 +225,7 @@ export function EconomicCalendar() {
         {state.status === 'loading' && <div className="p-8 text-[13px] text-muted text-center">Loading economic calendar…</div>}
         {state.status === 'no-key' && (
           <div className="p-8 text-[13px] text-warn text-center">
-            No data source configured. Add <span className="text-txt">VITE_FMP_API_KEY</span> to enable the live economic calendar.
+            No data source configured. Add <span className="text-txt">VITE_JBLANKED_API_KEY</span> (free, from jblanked.com) to enable the live economic calendar.
           </div>
         )}
         {state.status === 'error' && (
@@ -212,21 +261,4 @@ export function EconomicCalendar() {
                     </span>
                     <span className="col-span-2 md:col-span-1 text-txt2 md:text-txt order-last md:order-none">{e.event}</span>
                     <span className="tnum text-muted md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Prev</span>{e.previous ?? '—'}</span>
-                    <span className="tnum text-txt2 md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Fcst</span>{e.estimate ?? '—'}</span>
-                    <span className="tnum md:text-right font-700" style={{ color: e.actual !== null ? '#FFFFFF' : '#8A93A6' }}>
-                      <span className="md:hidden text-[10px] uppercase mr-1 font-400">Act</span>{e.actual ?? '—'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="text-[10px] text-muted/55">
-        Live data from Financial Modeling Prep · times shown in UTC · updates roughly every 15 minutes.
-      </div>
-    </div>
-  );
-}
+                    <span className="tnum text-txt2 m
