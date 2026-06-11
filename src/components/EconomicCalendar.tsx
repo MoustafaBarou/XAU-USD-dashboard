@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { computeGoldImpact, biasMarker } from '../lib/goldImpact';
 import { EventCountdown } from './EventCountdown';
-import { fmtAmsTime, amsZoneLabel } from '../lib/time';
+import { fmtAmsTime, amsZoneLabel, parseJbDateAms } from '../lib/time';
 
 // -- Types -----------------------------------------------------------------
 type Impact = 'High' | 'Medium' | 'Low' | 'None';
@@ -51,12 +51,7 @@ function val(v: unknown): number | string | null {
   return typeof v === 'number' ? v : String(v);
 }
 
-function parseJbDate(s: unknown): string {
-  const str = String(s ?? '');
-  const iso = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})\s+(.+)$/, '$1-$2-$3T$4Z');
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toISOString();
-}
+const parseJbDate = parseJbDateAms;
 
 async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const url = `${CALENDAR_PROXY}?from=${fromISO}&to=${toISO}`;
