@@ -10,7 +10,10 @@ export const config = { runtime: 'edge' };
 export default async function handler(req: Request): Promise<Response> {
   const key = process.env.JBLANKED_API_KEY;
   if (!key) {
-    return json({ error: 'no-key', message: 'JBLANKED_API_KEY not configured on the server.' }, 500);
+    return json({
+      error: 'no-key',
+      message: 'JBLANKED_API_KEY is not set on the server. Add it in Vercel -> Settings -> Environment Variables (NO VITE_ prefix), then redeploy.',
+    }, 500);
   }
 
   const { searchParams } = new URL(req.url);
@@ -29,14 +32,22 @@ export default async function handler(req: Request): Promise<Response> {
     });
     const text = await res.text();
     if (!res.ok) {
-      return json({ error: 'upstream', status: res.status, message: text.slice(0, 200) }, res.status);
+      let hint = text.slice(0, 200);
+      if (res.status === 401 || res.status === 403) {
+        hint = 'JBlanked rejected the API key (invalid, revoked, or daily free quota used up). Check usage at jblanked.com/api/usage/.';
+      } else if (res.status === 429) {
+        hint = 'JBlanked rate limit reached (free tier is limited per day). Try again later or add credits.';
+      }
+      return json({ error: 'upstream', status: res.status, message: hint }, res.status);
     }
+    // Cache aggressively at the edge: JBlanked's free tier allows very few
+    // requests per day, so we serve cached calendar data for 12h.
     return new Response(text, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 's-maxage=900, stale-while-revalidate=3600',
+        'Cache-Control': 's-maxage=43200, stale-while-revalidate=86400', // cache 12h at the edge (free-tier friendly)
       },
     });
   } catch (e) {
