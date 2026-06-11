@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { computeGoldImpact, biasMarker } from '../lib/goldImpact';
 import { EventCountdown } from './EventCountdown';
 import { fmtAmsTime, amsZoneLabel, parseJbDateAms } from '../lib/time';
+import { dedupeEvents } from '../hooks/useEconomicCalendar';
 
 // -- Types -----------------------------------------------------------------
 type Impact = 'High' | 'Medium' | 'Low' | 'None';
@@ -59,7 +60,7 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   if (!res.ok) throw new Error(`Calendar HTTP ${res.status}`);
   const arr = await res.json();
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
-  return arr.map((e: Record<string, unknown>, i: number) => {
+  const mapped = arr.map((e: Record<string, unknown>, i: number) => {
     const date = parseJbDate(e.Date);
     // Future events have not been released yet; JBlanked sends 0 as a
     // placeholder for their actual, so treat it as pending (null).
@@ -77,6 +78,7 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
       previous: val(e.Previous),
     };
   });
+  return dedupeEvents(mapped);
 }
 
 async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
@@ -95,7 +97,7 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
     }
     const arr = await res.json();
     if (!Array.isArray(arr)) { lastErr = 'FMP: unexpected response'; continue; }
-    return arr.map((e: Record<string, unknown>, i: number) => ({
+    const mapped = arr.map((e: Record<string, unknown>, i: number) => ({
       id: `${e.event ?? 'evt'}-${e.date ?? i}-${i}`,
       date: String(e.date ?? ''),
       currency: String(e.currency ?? e.country ?? '-'),
@@ -106,6 +108,7 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
       estimate: val(e.estimate),
       previous: val(e.previous),
     }));
+    return dedupeEvents(mapped);
   }
   throw new Error(lastErr || 'FMP fetch failed');
 }
