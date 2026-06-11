@@ -5,48 +5,64 @@ import {
 import { supabase, type JournalEntry } from '../lib/supabase';
 import { useAuthContext } from '../lib/AuthContext';
 
-// ── Per-trade computed P/L from raw fields (client-side) ──────────────────
-interface TradePL {
-  netPl: number;
+// ── Per-trade metrics computed from raw fields (client-side only) ──────────
+interface TradeMetrics {
   grossPl: number;
-  rrr: number | null;
+  netPl: number;
+  rMultiple: number | null;
   returnPct: number | null;
 }
-function tradePL(r: JournalEntry): TradePL | null {
+
+function computeTrade(r: JournalEntry): TradeMetrics | null {
   const entry = r.entry_price ?? r.entry;
   const exit = r.exit_price ?? r.exit;
   const qty = r.quantity;
-  const dir = (r.direction ?? r.bias) === 'Long' ? 1 : (r.direction ?? r.bias) === 'Short' ? -1 : 0;
-  if (entry == null || exit == null || qty == null || dir === 0) return null;
+  const dir = (r.direction ?? r.bias) === 'Long' ? 'Long' : (r.direction ?? r.bias) === 'Short' ? 'Short' : null;
+  if (entry == null || exit == null || qty == null || dir == null) return null;
 
-  const grossPl = (exit - entry) * qty * dir;
+  // Gross P/L per spec
+  const grossPl = dir === 'Long'
+    ? (exit - entry) * qty
+    : (entry - exit) * qty;
+
+  // Net P/L = gross - fees
   const netPl = grossPl - (r.fees ?? 0);
 
-  let rrr: number | null = null;
-  if (r.stop_loss != null && r.take_profit != null) {
+  // R-Multiple per spec: risk from stop_loss, reward = |exit - entry|.
+  // Signed so losing trades read negative.
+  let rMultiple: number | null = null;
+  if (r.stop_loss != null) {
     const risk = Math.abs(entry - r.stop_loss);
-    const reward = Math.abs(r.take_profit - entry);
-    if (risk > 0) rrr = reward / risk;
+    if (risk > 0) {
+      const reward = Math.abs(exit - entry);
+      const sign = grossPl >= 0 ? 1 : -1;
+      rMultiple = (reward / risk) * sign;
+    }
   }
+
+  // Return % on notional
   let returnPct: number | null = null;
   if (entry * qty !== 0) returnPct = (netPl / Math.abs(entry * qty)) * 100;
 
-  return { netPl, grossPl, rrr, returnPct };
+  return { grossPl, netPl, rMultiple, returnPct };
 }
 
 interface Stats {
   totalTrades: number;
   closedTrades: number;
   winRate: number | null;
-  netReturnDollar: number;
-  netReturnPct: number | null;
+  netPl: number;
+  grossPl: number;
+  profitFactor: number | null;
+  avgWin: number | null;
+  avgLoss: number | null;
   avgPl: number | null;
   avgR: number | null;
-  profitFactor: number | null;
+  totalReturnPct: number | null;
 }
 interface CurvePoint { i: number; cum: number; }
 
-function round(x: number, p = 2) { return Math.round(x * 10 ** p) / 10 ** p; }
+const round = (x: number, p = 2) => Math.round(x * 10 ** p) / 10 ** p;
 
 export function Reports() {
   const { user, loading: authLoading } = useAuthContext();
@@ -70,35 +86,35 @@ export function Reports() {
   useEffect(() => { load(); }, [load]);
 
   const { stats, curve } = useMemo(() => {
-    const pls = rows.map(tradePL).filter((x): x is TradePL => x !== null);
-    const closed = pls.length;
-    const wins = pls.filter((p) => p.netPl > 0);
-    const losses = pls.filter((p) => p.netPl < 0);
+    const m = rows.map(computeTrade).filter((x): x is TradeMetrics => x !== null);
+    const closed = m.length;
+    const wins = m.filter((t) => t.netPl > 0);
+    const losses = m.filter((t) => t.netPl < 0);
 
-    const grossWin = wins.reduce((a, p) => a + p.netPl, 0);
-    const grossLoss = Math.abs(losses.reduce((a, p) => a + p.netPl, 0));
-    const netReturnDollar = pls.reduce((a, p) => a + p.netPl, 0);
+    const netPl = m.reduce((a, t) => a + t.netPl, 0);
+    const grossPl = m.reduce((a, t) => a + t.grossPl, 0);
+    const grossWin = wins.reduce((a, t) => a + t.netPl, 0);
+    const grossLossAbs = Math.abs(losses.reduce((a, t) => a + t.netPl, 0));
 
-    const returnPcts = pls.map((p) => p.returnPct).filter((x): x is number => x !== null);
-    const netReturnPct = returnPcts.length ? returnPcts.reduce((a, b) => a + b, 0) : null;
-
-    const rrrs = rows.map(tradePL).filter((x): x is TradePL => x !== null && x.rrr !== null).map((p) => p.rrr as number);
-    const avgR = rrrs.length ? rrrs.reduce((a, b) => a + b, 0) / rrrs.length : null;
+    const rPcts = m.map((t) => t.returnPct).filter((x): x is number => x !== null);
+    const rMs = m.map((t) => t.rMultiple).filter((x): x is number => x !== null);
 
     const s: Stats = {
       totalTrades: rows.length,
       closedTrades: closed,
       winRate: closed > 0 ? (wins.length / closed) * 100 : null,
-      netReturnDollar: round(netReturnDollar),
-      netReturnPct: netReturnPct === null ? null : round(netReturnPct),
-      avgPl: closed > 0 ? round(netReturnDollar / closed) : null,
-      avgR: avgR === null ? null : round(avgR),
-      profitFactor: grossLoss > 0 ? round(grossWin / grossLoss) : (grossWin > 0 ? null : null),
+      netPl: round(netPl),
+      grossPl: round(grossPl),
+      profitFactor: grossLossAbs > 0 ? round(grossWin / grossLossAbs) : null,
+      avgWin: wins.length ? round(grossWin / wins.length) : null,
+      avgLoss: losses.length ? round(-grossLossAbs / losses.length) : null,
+      avgPl: closed > 0 ? round(netPl / closed) : null,
+      avgR: rMs.length ? round(rMs.reduce((a, b) => a + b, 0) / rMs.length) : null,
+      totalReturnPct: rPcts.length ? round(rPcts.reduce((a, b) => a + b, 0)) : null,
     };
 
     let cum = 0;
-    const c: CurvePoint[] = pls.map((p, i) => { cum += p.netPl; return { i: i + 1, cum: round(cum) }; });
-
+    const c: CurvePoint[] = m.map((t, i) => { cum += t.netPl; return { i: i + 1, cum: round(cum) }; });
     return { stats: s, curve: c };
   }, [rows]);
 
@@ -114,14 +130,14 @@ export function Reports() {
   if (error) return <div className="text-[12px] text-bear">{error}</div>;
 
   const plColor = (v: number | null) => (v === null ? '#C5CCD8' : v >= 0 ? '#00D98B' : '#FF4D6D');
-  const fmtUsd = (v: number | null) => (v === null ? '–n/a–' : `${v >= 0 ? '' : '-'}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  const fmtUsd = (v: number | null) => (v === null ? '–n/a–' : `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
   const fmtPct = (v: number | null) => (v === null ? '–n/a–' : `${round(v)}%`);
 
   return (
     <div className="space-y-8">
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Kpi label="Net Return %" value={fmtPct(stats.netReturnPct)} color={plColor(stats.netReturnPct)} />
+        <Kpi label="Net Return" value={fmtUsd(stats.netPl)} color={plColor(stats.netPl)} />
         <Kpi label="Win Rate" value={stats.winRate === null ? '–n/a–' : `${round(stats.winRate, 1)}%`}
           color={stats.winRate === null ? undefined : stats.winRate >= 50 ? '#00D98B' : '#FF4D6D'} />
         <Kpi label="Avg P/L" value={fmtUsd(stats.avgPl)} color={plColor(stats.avgPl)} />
@@ -130,15 +146,15 @@ export function Reports() {
         <Kpi label="Total Trades" value={stats.totalTrades.toString()} />
       </div>
 
-      {/* ── Equity Curve (recharts) ── */}
+      {/* ── Equity Curve ── */}
       <div className="surface surface-lit p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="eyebrow">Equity Curve</div>
             <div className="text-[11px] text-muted mt-1">Cumulative Net P/L across {stats.closedTrades} closed trades</div>
           </div>
-          <span className="font-sora font-800 text-[18px] tnum" style={{ color: plColor(stats.netReturnDollar) }}>
-            {fmtUsd(stats.netReturnDollar)}
+          <span className="font-sora font-800 text-[18px] tnum" style={{ color: plColor(stats.netPl) }}>
+            {fmtUsd(stats.netPl)}
           </span>
         </div>
         {curve.length < 2 ? (
@@ -148,33 +164,20 @@ export function Reports() {
         )}
       </div>
 
-      {/* ── Journal Summary table ── */}
+      {/* ── Extended performance grid ── */}
       <div className="surface surface-lit p-5 md:p-6">
-        <div className="eyebrow mb-4">Journal Summary</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-[13px] border-collapse">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-[0.14em] text-muted/70 border-b border-white/[0.08]">
-                <Th>Return %</Th><Th>Return $</Th><Th>Avg P/L</Th><Th>Avg R</Th>
-                <Th>Profit Factor</Th><Th>Winrate</Th><Th>Trades #</Th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-white/[0.04]">
-                <Td color={plColor(stats.netReturnPct)}>{fmtPct(stats.netReturnPct)}</Td>
-                <Td color={plColor(stats.netReturnDollar)}>{fmtUsd(stats.netReturnDollar)}</Td>
-                <Td color={plColor(stats.avgPl)}>{fmtUsd(stats.avgPl)}</Td>
-                <Td>{stats.avgR === null ? '–n/a–' : `${stats.avgR}:1`}</Td>
-                <Td color={stats.profitFactor === null ? undefined : stats.profitFactor >= 1 ? '#00D98B' : '#FF4D6D'}>
-                  {stats.profitFactor === null ? '–n/a–' : stats.profitFactor.toFixed(2)}
-                </Td>
-                <Td>{stats.winRate === null ? '–n/a–' : `${round(stats.winRate, 1)}%`}</Td>
-                <Td>{stats.closedTrades} / {stats.totalTrades}</Td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="eyebrow mb-4">Performance Snapshot</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Metric label="Gross P/L" value={fmtUsd(stats.grossPl)} color={plColor(stats.grossPl)} />
+          <Metric label="Net P/L" value={fmtUsd(stats.netPl)} color={plColor(stats.netPl)} />
+          <Metric label="Average Win" value={fmtUsd(stats.avgWin)} color="#00D98B" />
+          <Metric label="Average Loss" value={fmtUsd(stats.avgLoss)} color="#FF4D6D" />
+          <Metric label="Average R" value={stats.avgR === null ? '–n/a–' : `${stats.avgR}R`} color={plColor(stats.avgR)} />
+          <Metric label="Total Return %" value={fmtPct(stats.totalReturnPct)} color={plColor(stats.totalReturnPct)} />
+          <Metric label="Win Rate" value={stats.winRate === null ? '–n/a–' : `${round(stats.winRate, 1)}%`} />
+          <Metric label="Trades (closed/total)" value={`${stats.closedTrades} / ${stats.totalTrades}`} />
         </div>
-        <div className="text-[10px] text-muted/55 mt-4">All figures computed client-side from your journal. “Trades #” shows closed / total.</div>
+        <div className="text-[10px] text-muted/55 mt-4">All figures computed client-side from your journal entries. No data leaves your account.</div>
       </div>
     </div>
   );
@@ -226,9 +229,11 @@ function Kpi({ label, value, color }: { label: string; value: string; color?: st
     </div>
   );
 }
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="text-left font-500 py-2 pr-4 whitespace-nowrap">{children}</th>;
-}
-function Td({ children, color }: { children: React.ReactNode; color?: string }) {
-  return <td className="py-3 pr-4 font-sora font-700 tnum whitespace-nowrap" style={{ color: color ?? '#FFFFFF' }}>{children}</td>;
+function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="card p-4">
+      <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1.5">{label}</div>
+      <div className="font-sora font-700 text-[17px] tnum" style={{ color: color ?? '#FFFFFF' }}>{value}</div>
+    </div>
+  );
 }
