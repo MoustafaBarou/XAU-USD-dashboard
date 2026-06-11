@@ -37,6 +37,27 @@ function val(v: unknown): number | string | null {
 }
 const parseJbDate = parseJbDateAms;
 
+// JBlanked sometimes returns the same release twice (e.g. a real-time entry
+// and a delayed/duplicate entry an hour apart). Collapse same event+currency on
+// the same day into one row: prefer the entry that already has an actual value,
+// otherwise the earliest time (which matches ForexFactory's listing).
+export function dedupeEvents<T extends { event: string; currency: string; date: string; actual: number | string | null }>(events: T[]): T[] {
+  const byKey = new Map<string, T>();
+  for (const e of events) {
+    if (!e.date) continue;
+    const day = e.date.slice(0, 10);
+    const key = `${e.currency}|${e.event}|${day}`;
+    const existing = byKey.get(key);
+    if (!existing) { byKey.set(key, e); continue; }
+    const eHasActual = e.actual !== null;
+    const exHasActual = existing.actual !== null;
+    if (eHasActual && !exHasActual) { byKey.set(key, e); continue; }
+    if (!eHasActual && exHasActual) { continue; }
+    if (+new Date(e.date) < +new Date(existing.date)) { byKey.set(key, e); }
+  }
+  return [...byKey.values()].sort((a, b) => +new Date(a.date) - +new Date(b.date));
+}
+
 async function fetchEvents(): Promise<CalEvent[]> {
   const from = new Date();
   const to = new Date(); to.setDate(to.getDate() + 7);
@@ -44,7 +65,7 @@ async function fetchEvents(): Promise<CalEvent[]> {
   if (!res.ok) throw new Error(`Calendar HTTP ${res.status}`);
   const arr = await res.json();
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
-  return arr.map((e: Record<string, unknown>, i: number) => {
+  const mapped = arr.map((e: Record<string, unknown>, i: number) => {
     const date = parseJbDate(e.Date);
     // JBlanked returns 0 (not null) for the actual of events that have not been
     // released yet. Any event still in the future cannot have an actual, so we
@@ -62,6 +83,7 @@ async function fetchEvents(): Promise<CalEvent[]> {
       previous: val(e.Previous),
     };
   });
+  return dedupeEvents(mapped);
 }
 
 /** Shared hook: fetches the 7-day calendar via the proxy and refreshes it. */
