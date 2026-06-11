@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { parseJbDateAms } from '../lib/time';
 
 export type Impact = 'High' | 'Medium' | 'Low' | 'None';
 
@@ -34,12 +35,7 @@ function val(v: unknown): number | string | null {
   if (v === null || v === undefined || v === '') return null;
   return typeof v === 'number' ? v : String(v);
 }
-function parseJbDate(s: unknown): string {
-  const str = String(s ?? '');
-  const iso = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})\s+(.+)$/, '$1-$2-$3T$4Z');
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toISOString();
-}
+const parseJbDate = parseJbDateAms;
 
 async function fetchEvents(): Promise<CalEvent[]> {
   const from = new Date();
