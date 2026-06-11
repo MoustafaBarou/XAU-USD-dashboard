@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { computeGoldImpact, biasMarker } from '../lib/goldImpact';
 import { EventCountdown } from './EventCountdown';
+import { fmtAmsTime, amsZoneLabel } from '../lib/time';
 
 // -- Types -----------------------------------------------------------------
 type Impact = 'High' | 'Medium' | 'Low' | 'None';
@@ -238,7 +239,8 @@ export function EconomicCalendar() {
             <div className="divide-y divide-white/[0.04]">
               {filtered.map((e) => {
                 const t = e.date ? new Date(e.date) : null;
-                const time = t ? t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const time = t ? fmtAmsTime(e.date) : '-';
+                const zone = t ? amsZoneLabel(e.date) : '';
                 const gi = computeGoldImpact({ event: e.event, actual: e.actual, estimate: e.estimate, previous: e.previous });
                 const giColor = gi.bias === 'Bullish Gold' ? '#00D98B' : gi.bias === 'Bearish Gold' ? '#FF4D6D' : '#8A93A6';
                 const upcoming = !!t && t.getTime() > Date.now();
@@ -246,7 +248,7 @@ export function EconomicCalendar() {
                 return (
                   <div key={e.id}
                     className="grid grid-cols-2 md:grid-cols-[80px_70px_80px_1fr_90px_90px_90px_120px] gap-x-3 gap-y-1.5 px-4 md:px-5 py-3 text-[13px] hover:bg-white/[0.02] transition-colors">
-                    <span className="tnum text-txt2 md:text-txt">{time}<span className="text-muted/50 text-[10px] ml-1">UTC</span></span>
+                    <span className="tnum text-txt2 md:text-txt">{time}<span className="text-muted/50 text-[10px] ml-1">{zone}</span></span>
                     <span className="font-700 text-txt">{e.currency}</span>
                     <span className="flex items-center">
                       <span className="text-[10px] font-700 px-2 py-[2px] rounded-full uppercase tracking-wide"
@@ -280,7 +282,7 @@ export function EconomicCalendar() {
       </div>
 
       <div className="text-[10px] text-muted/55">
-        Live data from JBlanked (Forex Factory) - times shown in UTC.
+        Live data from JBlanked (Forex Factory) - times shown in Amsterdam time (CET/CEST).
       </div>
     </div>
   );
