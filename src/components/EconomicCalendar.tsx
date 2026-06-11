@@ -63,17 +63,24 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   if (!res.ok) throw new Error(`Calendar HTTP ${res.status}`);
   const arr = await res.json();
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
-  return arr.map((e: Record<string, unknown>, i: number) => ({
-    id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
-    date: parseJbDate(e.Date),
-    currency: String(e.Currency ?? '-'),
-    country: String(e.Currency ?? '-'),
-    event: String(e.Name ?? 'Unknown event'),
-    impact: normalizeImpact(e.Impact),
-    actual: val(e.Actual),
-    estimate: val(e.Forecast),
-    previous: val(e.Previous),
-  }));
+  return arr.map((e: Record<string, unknown>, i: number) => {
+    const date = parseJbDate(e.Date);
+    // Future events have not been released yet; JBlanked sends 0 as a
+    // placeholder for their actual, so treat it as pending (null).
+    const isFuture = date !== '' && new Date(date).getTime() > Date.now();
+    const rawActual = val(e.Actual);
+    return {
+      id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
+      date,
+      currency: String(e.Currency ?? '-'),
+      country: String(e.Currency ?? '-'),
+      event: String(e.Name ?? 'Unknown event'),
+      impact: normalizeImpact(e.Impact),
+      actual: isFuture ? null : rawActual,
+      estimate: val(e.Forecast),
+      previous: val(e.Previous),
+    };
+  });
 }
 
 async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
