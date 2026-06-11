@@ -1,40 +1,96 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Eyebrow } from './ui';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase, type JournalEntry } from '../lib/supabase';
 import { useAuthContext } from '../lib/AuthContext';
 
-// Draft uses strings for the inputs; numeric fields are parsed on save.
-interface Draft { date: string; bias: string; setup: string; entry: string; exit: string; result: string; lessons: string; }
+const INSTRUMENTS = ['XAUUSD', 'BTCUSD', 'EURUSD', 'GBPUSD', 'US30', 'NAS100'];
+const SETUPS = ['Intraday', 'Scalp', 'Swing'];
 
-// 'select' fields render a dropdown; everything else is a text/date input.
-type FieldKind = 'text' | 'date' | 'select';
-const FIELDS: { key: keyof Draft; label: string; wide?: boolean; kind?: FieldKind; options?: string[]; placeholder?: string }[] = [
-  { key: 'date', label: 'Date', kind: 'date' },
-  { key: 'bias', label: 'Bias', kind: 'select', options: ['Long', 'Short'], placeholder: 'Select Bias' },
-  { key: 'setup', label: 'Setup', wide: true, kind: 'select', options: ['Intraday', 'Scalp', 'Swing'], placeholder: 'Select Setup' },
-  { key: 'entry', label: 'Entry' },
-  { key: 'exit', label: 'Exit' },
-  { key: 'result', label: 'Result' },
-  { key: 'lessons', label: 'Lessons Learned', wide: true },
-];
-const blank: Draft = { date: '', bias: '', setup: '', entry: '', exit: '', result: '', lessons: '' };
+interface Draft {
+  date: string;          // entry datetime-local
+  instrument: string;
+  setup: string;
+  direction: string;     // 'Long' | 'Short'
+  entry_price: string;
+  quantity: string;
+  stop_loss: string;
+  take_profit: string;
+  exit_date: string;     // datetime-local
+  exit_price: string;
+  fees: string;
+  notes: string;
+}
 
-// Shared field styling — identical for inputs and selects.
-const FIELD_CLASS =
-  'w-full mt-2 bg-transparent border-b border-white/15 px-1 py-1.5 text-[14px] text-txt focus:border-gold/60 outline-none transition-colors [color-scheme:dark]';
+const blank: Draft = {
+  date: '', instrument: '', setup: '', direction: '',
+  entry_price: '', quantity: '', stop_loss: '', take_profit: '',
+  exit_date: '', exit_price: '', fees: '', notes: '',
+};
+
+const numOrNull = (s: string) => (s.trim() === '' || isNaN(Number(s)) ? null : Number(s));
+const num = (s: string) => (s.trim() === '' || isNaN(Number(s)) ? NaN : Number(s));
+
+function toLocalInput(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = (x: number) => x.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function toIso(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+// ── Auto-calculations (client-side only; not stored as columns) ───────────
+interface Calcs { grossPl: number | null; netPl: number | null; rrr: number | null; returnPct: number | null; }
+function computeCalcs(d: Draft): Calcs {
+  const entry = num(d.entry_price), exit = num(d.exit_price), qty = num(d.quantity);
+  const sl = num(d.stop_loss), tp = num(d.take_profit), fees = num(d.fees);
+  const dir = d.direction === 'Long' ? 1 : d.direction === 'Short' ? -1 : 0;
+
+  let grossPl: number | null = null;
+  if (!isNaN(entry) && !isNaN(exit) && !isNaN(qty) && dir !== 0) grossPl = (exit - entry) * qty * dir;
+
+  let netPl: number | null = null;
+  if (grossPl !== null) netPl = grossPl - (isNaN(fees) ? 0 : fees);
+
+  let rrr: number | null = null;
+  if (!isNaN(entry) && !isNaN(sl) && !isNaN(tp) && dir !== 0) {
+    const risk = Math.abs(entry - sl);
+    const reward = Math.abs(tp - entry);
+    if (risk > 0) rrr = reward / risk;
+  }
+
+  let returnPct: number | null = null;
+  if (netPl !== null && !isNaN(entry) && !isNaN(qty) && entry * qty !== 0) {
+    returnPct = (netPl / Math.abs(entry * qty)) * 100;
+  }
+
+  const r = (x: number | null, p = 2) => (x === null ? null : Math.round(x * 10 ** p) / 10 ** p);
+  return { grossPl: r(grossPl), netPl: r(netPl), rrr: r(rrr), returnPct: r(returnPct) };
+}
 
 function toDraft(row: JournalEntry): Draft {
   return {
-    date: row.date ?? '',
-    bias: row.bias ?? '',
+    date: toLocalInput(row.date),
+    instrument: row.instrument ?? '',
     setup: row.setup ?? '',
-    entry: row.entry?.toString() ?? '',
-    exit: row.exit?.toString() ?? '',
-    result: row.result ?? '',
-    lessons: row.lessons ?? '',
+    direction: row.direction ?? row.bias ?? '',
+    entry_price: (row.entry_price ?? row.entry)?.toString() ?? '',
+    quantity: row.quantity?.toString() ?? '',
+    stop_loss: row.stop_loss?.toString() ?? '',
+    take_profit: row.take_profit?.toString() ?? '',
+    exit_date: toLocalInput(row.exit_date),
+    exit_price: (row.exit_price ?? row.exit)?.toString() ?? '',
+    fees: row.fees?.toString() ?? '',
+    notes: row.notes ?? row.lessons ?? '',
   };
 }
-const numOrNull = (s: string) => (s.trim() === '' || isNaN(Number(s)) ? null : Number(s));
+
+const FIELD =
+  'w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[14px] text-txt placeholder:text-muted/50 focus:border-gold/50 outline-none transition-colors [color-scheme:dark]';
+const LABEL = 'text-[10px] uppercase tracking-[0.16em] text-muted mb-1.5 block';
 
 export function Journal() {
   const { user, loading: authLoading } = useAuthContext();
@@ -45,14 +101,17 @@ export function Journal() {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // READ — fetch this user's entries (RLS guarantees only their own rows)
+  const calcs = useMemo(() => computeCalcs(draft), [draft]);
+  const set = (k: keyof Draft, v: string) => setDraft((d) => ({ ...d, [k]: v }));
+
+  // READ — RLS guarantees only the signed-in user's rows
   const load = useCallback(async () => {
     if (!user) { setRows([]); return; }
     setLoading(true); setError(null);
     const { data, error } = await supabase
       .from('journal_entries')
       .select('*')
-      .order('date', { ascending: false })
+      .order('date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
     if (error) setError(error.message);
     else setRows((data as JournalEntry[]) ?? []);
@@ -63,133 +122,224 @@ export function Journal() {
 
   // CREATE / UPDATE
   async function save() {
-    if (!user) { setError('Sign in to save journal entries.'); return; }
-    if (!draft.date && !draft.setup) return;
+    if (!user) { setError('Sign in to save trades.'); return; }
+    if (!draft.instrument && !draft.entry_price) { setError('Add at least an instrument or entry price.'); return; }
     setBusy(true); setError(null);
 
     const payload = {
       user_id: user.id,
-      date: draft.date || new Date().toISOString().slice(0, 10),
-      bias: draft.bias || null,
+      date: toIso(draft.date) ?? new Date().toISOString(),
+      bias: draft.direction || null,          // legacy mirror
       setup: draft.setup || null,
-      entry: numOrNull(draft.entry),
-      exit: numOrNull(draft.exit),
-      result: draft.result || null,
-      lessons: draft.lessons || null,
+      entry: numOrNull(draft.entry_price),     // legacy mirror
+      exit: numOrNull(draft.exit_price),       // legacy mirror
+      result: calcs.netPl !== null ? calcs.netPl.toString() : null,
+      lessons: draft.notes || null,            // legacy mirror
+      instrument: draft.instrument || null,
+      direction: draft.direction || null,
+      entry_price: numOrNull(draft.entry_price),
+      exit_price: numOrNull(draft.exit_price),
+      quantity: numOrNull(draft.quantity),
+      stop_loss: numOrNull(draft.stop_loss),
+      take_profit: numOrNull(draft.take_profit),
+      fees: numOrNull(draft.fees),
+      exit_date: toIso(draft.exit_date),
+      notes: draft.notes || null,
     };
 
-    if (editingId) {
-      const { error } = await supabase.from('journal_entries').update(payload).eq('id', editingId);
-      if (error) setError(error.message);
-    } else {
-      const { error } = await supabase.from('journal_entries').insert(payload);
-      if (error) setError(error.message);
-    }
-
+    const res = editingId
+      ? await supabase.from('journal_entries').update(payload).eq('id', editingId)
+      : await supabase.from('journal_entries').insert(payload);
     setBusy(false);
-    if (!error) { setDraft(blank); setEditingId(null); load(); }
+    if (res.error) { setError(res.error.message); return; }
+    setDraft(blank); setEditingId(null); load();
   }
 
   // DELETE
   async function remove(id: string) {
     setError(null);
     const { error } = await supabase.from('journal_entries').delete().eq('id', id);
-    if (error) setError(error.message);
-    else load();
+    if (error) setError(error.message); else load();
   }
 
-  function edit(row: JournalEntry) {
-    setEditingId(row.id);
-    setDraft(toDraft(row));
+  function edit(row: JournalEntry) { setEditingId(row.id); setDraft(toDraft(row)); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function cancel() { setEditingId(null); setDraft(blank); }
+
+  if (authLoading) return <div className="text-[12px] text-muted">Checking session…</div>;
+  if (!user) {
+    return (
+      <div className="card p-6 text-[13px] text-txt2/85 leading-relaxed">
+        Sign in to create and view your trade journal. Your trades are private to your account.
+      </div>
+    );
   }
-  function cancelEdit() { setEditingId(null); setDraft(blank); }
+
+  const plColor = (v: number | null) => (v === null ? '#8A93A6' : v >= 0 ? '#00D98B' : '#FF4D6D');
+  const fmt = (v: number | null, suffix = '') => (v === null ? '–n/a–' : `${v}${suffix}`);
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">Trade Journal</h3>
-        <Eyebrow>{editingId ? 'Editing' : 'Record'}</Eyebrow>
+    <div>
+      {/* ── New / Edit Trade card ── */}
+      <div className="surface surface-lit p-6 md:p-7">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2.5">
+            <span className="text-gold">★</span>
+            <h3 className="font-sora font-800 text-[18px] text-txt tracking-wide">{editingId ? 'Edit Trade' : 'New Trade'}</h3>
+          </div>
+          {editingId && <button onClick={cancel} className="text-muted hover:text-txt text-[18px] leading-none">×</button>}
+        </div>
+
+        {/* GENERAL TRADE DATA */}
+        <SectionTitle>General Trade Data</SectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="md:col-span-2">
+            <label className={LABEL}>Entry Date</label>
+            <input type="datetime-local" value={draft.date} onChange={(e) => set('date', e.target.value)} className={FIELD} />
+          </div>
+          <div>
+            <label className={LABEL}>Instrument</label>
+            <select value={draft.instrument} onChange={(e) => set('instrument', e.target.value)} className={FIELD}>
+              <option value="" disabled className="bg-bg">Select Instrument</option>
+              {INSTRUMENTS.map((s) => <option key={s} value={s} className="bg-bg">{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Setup</label>
+            <select value={draft.setup} onChange={(e) => set('setup', e.target.value)} className={FIELD}>
+              <option value="" disabled className="bg-bg">Select Setup</option>
+              {SETUPS.map((s) => <option key={s} value={s} className="bg-bg">{s}</option>)}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className={LABEL}>Direction</label>
+            <div className="grid grid-cols-2 rounded-lg overflow-hidden border border-white/10">
+              {['Long', 'Short'].map((dir) => {
+                const on = draft.direction === dir;
+                const col = dir === 'Long' ? '#00D98B' : '#FF4D6D';
+                return (
+                  <button key={dir} type="button" onClick={() => set('direction', dir)}
+                    className="py-2.5 text-[13px] font-700 font-sora tracking-wide transition-all"
+                    style={on ? { background: `${col}1f`, color: col, boxShadow: `inset 0 0 0 1px ${col}55` } : { color: '#8A93A6' }}>
+                    {dir}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* TRADE ENTRY + TRADE EXIT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <div>
+            <SectionTitle>Trade Entry</SectionTitle>
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <Num label="Entry Price" v={draft.entry_price} on={(v) => set('entry_price', v)} />
+              <Num label="Quantity" v={draft.quantity} on={(v) => set('quantity', v)} />
+              <Num label="Stop Loss" v={draft.stop_loss} on={(v) => set('stop_loss', v)} />
+              <Num label="Take Profit" v={draft.take_profit} on={(v) => set('take_profit', v)} />
+            </div>
+          </div>
+          <div>
+            <SectionTitle>Trade Exit</SectionTitle>
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <div>
+                <label className={LABEL}>Exit Date</label>
+                <input type="datetime-local" value={draft.exit_date} onChange={(e) => set('exit_date', e.target.value)} className={FIELD} />
+              </div>
+              <Num label="Exit Price" v={draft.exit_price} on={(v) => set('exit_price', v)} />
+              <Num label="Fees" v={draft.fees} on={(v) => set('fees', v)} />
+            </div>
+          </div>
+        </div>
+
+        {/* RESULTS — auto-calculated */}
+        <SectionTitle>Results</SectionTitle>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <Result label="Gross P/L" value={fmt(calcs.grossPl)} color={plColor(calcs.grossPl)} />
+          <Result label="Net P/L" value={fmt(calcs.netPl)} color={plColor(calcs.netPl)} />
+          <Result label="RRR" value={calcs.rrr === null ? '–n/a–' : `1:${calcs.rrr}`} />
+          <Result label="Return" value={fmt(calcs.returnPct, '%')} color={plColor(calcs.returnPct)} />
+        </div>
+
+        {/* NOTES */}
+        <SectionTitle>Personal Notes</SectionTitle>
+        <textarea value={draft.notes} onChange={(e) => set('notes', e.target.value)} rows={4}
+          placeholder="Thesis, execution quality, emotions, lessons…"
+          className={`${FIELD} resize-y min-h-[110px] mb-5`} />
+
+        {error && <div className="mb-4 text-[12px] text-bear">{error}</div>}
+
+        <div className="flex items-center gap-3">
+          <button onClick={save} disabled={busy}
+            className="font-sora font-700 text-[13px] tracking-wide text-bg bg-gradient-to-r from-goldBright to-gold rounded-lg px-6 py-2.5 transition-all hover:opacity-90 disabled:opacity-50">
+            {busy ? 'Saving…' : editingId ? 'Update Trade' : 'Save Trade'}
+          </button>
+          {editingId && (
+            <button onClick={cancel} className="text-[13px] text-muted hover:text-txt border border-white/10 rounded-lg px-5 py-2.5 transition-colors">Cancel</button>
+          )}
+        </div>
       </div>
 
-      {/* Not signed in: clear gate, no fake data */}
-      {!authLoading && !user && (
-        <div className="card p-6 text-[13px] text-txt2/85 leading-relaxed">
-          Sign in to create and view your trade journal. Your entries are private to your account.
-        </div>
-      )}
-
-      {user && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
-            {FIELDS.map((f) => (
-              <div key={f.key} className={f.wide ? 'col-span-2 md:col-span-3' : ''}>
-                <label className="text-[10px] uppercase tracking-[0.16em] text-muted">{f.label}</label>
-                {f.kind === 'select' ? (
-                  <select
-                    value={draft[f.key]}
-                    onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="" disabled className="bg-bg text-muted">{f.placeholder}</option>
-                    {f.options!.map((opt) => (
-                      <option key={opt} value={opt} className="bg-bg text-txt">{opt}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type={f.kind ?? 'text'}
-                    value={draft[f.key]}
-                    onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                    className={FIELD_CLASS}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={save} disabled={busy}
-              className="font-sora font-700 text-[12px] tracking-wide text-bg bg-gradient-to-r from-goldBright to-gold rounded-lg px-5 py-2.5 transition-all hover:opacity-90 disabled:opacity-50">
-              {busy ? 'Saving…' : editingId ? 'Update Entry' : 'Add Entry'}
-            </button>
-            {editingId && (
-              <button onClick={cancelEdit}
-                className="text-[12px] text-muted hover:text-txt border border-white/10 rounded-lg px-4 py-2.5 transition-colors">
-                Cancel
-              </button>
-            )}
-          </div>
-
-          {error && <div className="mt-3 text-[12px] text-bear">{error}</div>}
-
-          {loading ? (
-            <div className="mt-6 text-[12px] text-muted">Loading entries…</div>
-          ) : rows.length > 0 ? (
-            <div className="mt-6">
-              {rows.map((e) => (
-                <div key={e.id} className="py-4 border-b border-white/[0.04] text-[13px] group">
-                  <div className="flex gap-3 flex-wrap text-txt2 items-center">
-                    <span className="text-gold font-600">{e.date || '—'}</span>
-                    <span>{e.bias}</span>
-                    <span className="text-muted">{e.setup}</span>
-                    <span className="tnum">In {e.entry ?? '—'} → Out {e.exit ?? '—'}</span>
-                    <span className="ml-auto font-600" style={{ color: (e.result ?? '').includes('-') ? '#FF4D6D' : '#00D98B' }}>{e.result}</span>
+      {/* ── Trade history ── */}
+      <div className="mt-8">
+        <div className="eyebrow mb-4">Trade History</div>
+        {loading ? (
+          <div className="text-[12px] text-muted">Loading trades…</div>
+        ) : rows.length === 0 ? (
+          <div className="text-[12px] text-muted/60">No trades yet. Log your first trade above.</div>
+        ) : (
+          <div className="space-y-2">
+            {rows.map((r) => {
+              const net = r.result !== null && r.result !== '' && !isNaN(Number(r.result)) ? Number(r.result) : null;
+              const dir = r.direction ?? r.bias;
+              const dirCol = dir === 'Long' ? '#00D98B' : dir === 'Short' ? '#FF4D6D' : '#8A93A6';
+              const when = r.date ? new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+              return (
+                <div key={r.id} className="card card-hover p-4 group transition-colors">
+                  <div className="flex items-center gap-3 flex-wrap text-[13px]">
+                    <span className="font-sora font-700 text-[14px] text-txt w-20">{r.instrument ?? '—'}</span>
+                    {dir && <span className="text-[10px] font-700 px-2 py-[2px] rounded-full uppercase" style={{ color: dirCol, background: `${dirCol}1a`, border: `1px solid ${dirCol}40` }}>{dir}</span>}
+                    {r.setup && <span className="text-[11px] text-muted">{r.setup}</span>}
+                    <span className="text-[11px] text-muted tnum">{when}</span>
+                    <span className="tnum text-txt2">In {r.entry_price ?? r.entry ?? '—'} → Out {r.exit_price ?? r.exit ?? '—'}</span>
+                    <span className="ml-auto font-sora font-700 tnum" style={{ color: plColor(net) }}>
+                      {net === null ? '—' : (net >= 0 ? '+' : '') + net}
+                    </span>
                     <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => edit(e)} className="text-[11px] text-greenSoft hover:underline">Edit</button>
-                      <button onClick={() => remove(e.id)} className="text-[11px] text-bear hover:underline">Delete</button>
+                      <button onClick={() => edit(r)} className="text-[11px] text-greenSoft hover:underline">Edit</button>
+                      <button onClick={() => remove(r.id)} className="text-[11px] text-bear hover:underline">Delete</button>
                     </span>
                   </div>
-                  {e.lessons && <div className="text-muted mt-1.5">{e.lessons}</div>}
+                  {(r.notes ?? r.lessons) && <div className="text-muted text-[12px] mt-1.5">{r.notes ?? r.lessons}</div>}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-6 text-[12px] text-muted/60">No entries yet. Add your first trade above.</div>
-          )}
+              );
+            })}
+          </div>
+        )}
+        <div className="text-[10px] text-muted/55 mt-4">Saved securely to your account via Supabase. Only you can see these trades.</div>
+      </div>
+    </div>
+  );
+}
 
-          <div className="text-[10px] text-muted/55 mt-4">Saved securely to your account via Supabase. Only you can see these entries.</div>
-        </>
-      )}
-    </section>
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <div className="font-sora font-700 text-[13px] text-txt tracking-wide mb-3">{children}</div>;
+}
+
+function Num({ label, v, on }: { label: string; v: string; on: (v: string) => void }) {
+  return (
+    <div>
+      <label className={LABEL}>{label}</label>
+      <input type="number" inputMode="decimal" value={v} onChange={(e) => on(e.target.value)} className={FIELD} placeholder="0.00" />
+    </div>
+  );
+}
+
+function Result({ label, value, color = '#C5CCD8' }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="card p-3 text-center">
+      <div className="text-[9px] uppercase tracking-[0.14em] text-muted mb-1">{label}</div>
+      <div className="font-sora font-700 text-[15px] tnum" style={{ color }}>{value}</div>
+    </div>
   );
 }
