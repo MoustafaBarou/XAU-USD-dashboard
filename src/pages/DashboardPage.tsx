@@ -6,6 +6,7 @@ import { BiasEngine } from '../components/BiasEngine';
 import { Chart } from '../components/Chart';
 import { DriverMatrix } from '../components/DriverMatrix';
 import { AiOverview } from '../components/Intelligence';
+import { DashboardMood } from '../components/DashboardMood';
 import type { GoldState } from '../hooks/useGoldFeed';
 import type { Quote } from '../services/priceService';
 
@@ -45,6 +46,9 @@ export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | n
           </button>
         </div>
       </div>
+
+      {/* market bias + next high-impact event */}
+      <div className="mb-5"><DashboardMood /></div>
 
       {/* session rail */}
       <div className="mb-5"><SessionRail /></div>
