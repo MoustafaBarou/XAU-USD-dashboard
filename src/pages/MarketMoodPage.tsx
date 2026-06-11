@@ -1,66 +1,103 @@
-import { motion } from 'framer-motion';
-import { CAPITAL_FLOWS } from '../data/intel';
-import { biasColor } from '../components/ui';
+import { useMemo } from 'react';
 import { PageHeader } from './PageShell';
+import { useEconomicCalendar } from '../hooks/useEconomicCalendar';
+import { computeMarketMood, moodColor, moodLabel } from '../lib/marketMood';
 
-/** Market Mood — risk gauge + the capital-flow readings that drive it. */
 export function MarketMoodPage() {
-  const avg = Math.round(CAPITAL_FLOWS.reduce((a, x) => a + x.value, 0) / CAPITAL_FLOWS.length);
-  const bands = ['Extreme Risk-Off', 'Risk-Off', 'Neutral', 'Risk-On', 'Extreme Risk-On'];
-  const idx = avg >= 75 ? 0 : avg >= 60 ? 1 : avg >= 45 ? 2 : avg >= 30 ? 3 : 4;
-  const angle = -90 + (1 - avg / 100) * 180;
+  const cal = useEconomicCalendar();
+
+  const mood = useMemo(() => {
+    if (cal.status !== 'ok') return null;
+    return computeMarketMood(cal.events);
+  }, [cal]);
 
   return (
     <div>
       <PageHeader
         title="Market Mood"
-        description="A composite risk gauge for gold, built from the prevailing capital-flow signals. Risk-off conditions typically favour bullion."
+        description="A live gold sentiment score distilled from today's economic calendar - inflation, jobs, growth and rate events, each scored for its directional pull on XAU/USD."
       />
       <div className="rule my-8" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-16 gap-y-10 items-center">
-        <div className="lg:col-span-5 flex flex-col items-center">
-          <div className="relative" style={{ width: 280, height: 160 }}>
-            <svg width="280" height="160" viewBox="0 0 280 160">
-              <defs>
-                <linearGradient id="moodp" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#FF4D6D" /><stop offset="0.5" stopColor="#FFC857" /><stop offset="1" stopColor="#00D98B" />
-                </linearGradient>
-              </defs>
-              <path d="M24 144 A116 116 0 0 1 256 144" fill="none" stroke="url(#moodp)" strokeWidth="14" strokeLinecap="round" />
-              <motion.line x1="140" y1="144" x2="140" y2="44" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"
-                initial={{ rotate: -90 }} animate={{ rotate: angle }} transition={{ type: 'spring', stiffness: 50 }}
-                style={{ transformOrigin: '140px 144px' }} />
-              <circle cx="140" cy="144" r="6" fill="#D4AF37" />
-            </svg>
-          </div>
-          <div className="text-center mt-3">
-            <div className="font-sora font-800 text-[26px] text-gold">{bands[idx]}</div>
-            <div className="text-[12px] text-muted mt-1">Composite {avg}/100 · gold-positive bias</div>
-          </div>
-        </div>
+      {cal.status === 'loading' && <div className="text-[13px] text-muted">Calculating market mood...</div>}
+      {cal.status === 'error' && <div className="text-[13px] text-bear">Couldn't load calendar data ({cal.message}).</div>}
 
-        <div className="lg:col-span-7">
-          <div className="eyebrow mb-5">Capital Flow Signals</div>
-          <div className="space-y-5">
-            {CAPITAL_FLOWS.map((f) => {
-              const c = biasColor(f.bias);
-              return (
-                <div key={f.key}>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[14px] text-txt2">{f.label}</span>
-                    <span className="text-[12px] tnum" style={{ color: c }}>{f.bias}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-                    <motion.div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${c}44, ${c})` }}
-                      initial={{ width: 0 }} whileInView={{ width: `${f.value}%` }} viewport={{ once: true }} transition={{ duration: 0.9 }} />
-                  </div>
+      {cal.status === 'ok' && mood && (
+        <div className="space-y-6">
+          {/* Gauge + headline */}
+          <div className="surface surface-lit p-6 md:p-8">
+            <div className="grid md:grid-cols-[260px_1fr] gap-8 items-center">
+              <Gauge score={mood.score} />
+              <div>
+                <div className="eyebrow mb-2">Market Mood</div>
+                <div className="font-sora font-800 tnum leading-none" style={{ fontSize: 'clamp(40px,6vw,64px)', color: moodColor(mood.score) }}>
+                  {mood.score}<span className="text-muted text-[24px] font-700"> / 100</span>
                 </div>
-              );
-            })}
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+                  style={{ background: `${moodColor(mood.score)}1a`, border: `1px solid ${moodColor(mood.score)}44` }}>
+                  <span>{mood.score >= 60 ? '🟢' : mood.score <= 39 ? '🔴' : '🟡'}</span>
+                  <span className="font-sora font-700 text-[13px] tracking-wide" style={{ color: moodColor(mood.score) }}>
+                    {moodLabel(mood.score)}
+                  </span>
+                </div>
+                {mood.topReason && <p className="text-[13px] text-txt2 mt-4 leading-relaxed max-w-lg">{mood.topReason}</p>}
+                <p className="text-[11px] text-muted/60 mt-2">Based on {mood.sampleSize} scored event{mood.sampleSize === 1 ? '' : 's'} over the next 7 days.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sentiment bar + percentages */}
+          <div className="surface surface-lit p-6">
+            <div className="eyebrow mb-4">Sentiment Balance</div>
+            <SentimentBar bullish={mood.bullishPct} bearish={mood.bearishPct} />
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <div className="card p-4 text-center">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bullish Gold</div>
+                <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#00D98B' }}>{mood.bullishPct}%</div>
+              </div>
+              <div className="card p-4 text-center">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bearish Gold</div>
+                <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#FF4D6D' }}>{mood.bearishPct}%</div>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted/55 mt-4">
+              Scale: 0-39 Bearish Gold - 40-59 Neutral - 60-100 Bullish Gold. Computed client-side from live calendar data.
+            </p>
           </div>
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function Gauge({ score }: { score: number }) {
+  const W = 240, H = 140, cx = W / 2, cy = H - 10, r = 100;
+  const color = moodColor(score);
+  const a = Math.PI * (1 - score / 100);
+  const px = cx + r * Math.cos(a);
+  const py = cy - r * Math.sin(a);
+  const arc = (from: number, to: number) => {
+    const a0 = Math.PI * (1 - from / 100), a1 = Math.PI * (1 - to / 100);
+    const x0 = cx + r * Math.cos(a0), y0 = cy - r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1), y1 = cy - r * Math.sin(a1);
+    return `M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`;
+  };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxWidth: 260 }}>
+      <path d={arc(0, 39)} fill="none" stroke="#FF4D6D" strokeWidth="14" strokeLinecap="round" opacity={0.85} />
+      <path d={arc(40, 59)} fill="none" stroke="#FFC857" strokeWidth="14" strokeLinecap="round" opacity={0.85} />
+      <path d={arc(60, 100)} fill="none" stroke="#00D98B" strokeWidth="14" strokeLinecap="round" opacity={0.85} />
+      <line x1={cx} y1={cy} x2={px} y2={py} stroke={color} strokeWidth="3" strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r="6" fill={color} />
+    </svg>
+  );
+}
+
+function SentimentBar({ bullish, bearish }: { bullish: number; bearish: number }) {
+  return (
+    <div className="h-5 w-full rounded-full overflow-hidden flex bg-black/40 border border-white/10">
+      <div style={{ width: `${bearish}%`, background: 'linear-gradient(90deg,#FF4D6D,#FF6B82)' }} className="h-full transition-all" />
+      <div style={{ width: `${bullish}%`, background: 'linear-gradient(90deg,#00B873,#00D98B)' }} className="h-full ml-auto transition-all" />
     </div>
   );
 }
