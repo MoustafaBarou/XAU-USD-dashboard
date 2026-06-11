@@ -3,6 +3,29 @@
 
 const AMS_TZ = 'Europe/Amsterdam';
 
+// JBlanked returns event times as Amsterdam wall-clock time (matching
+// ForexFactory's Amsterdam display), formatted "2024.02.08 15:30:00".
+// We must convert that wall-clock time to a true UTC instant so countdowns,
+// sorting and day-filtering are correct, then display it back in Amsterdam time.
+//
+// Returns an ISO UTC string, or '' if unparseable.
+export function parseJbDateAms(s: unknown): string {
+  const str = String(s ?? '');
+  const m = str.match(/^(\d{4})\.(\d{2})\.(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return '';
+  const [, ys, mos, ds, hs, mis, ss] = m;
+  const y = +ys, mo = +mos, d = +ds, h = +hs, mi = +mis, sec = ss ? +ss : 0;
+  // Offset (minutes) that Amsterdam is ahead of UTC for this wall-clock date.
+  const naiveUTC = Date.UTC(y, mo - 1, d, h, mi, sec);
+  const ams = new Date(new Date(naiveUTC).toLocaleString('en-US', { timeZone: AMS_TZ }));
+  const utc = new Date(new Date(naiveUTC).toLocaleString('en-US', { timeZone: 'UTC' }));
+  const offsetMin = Math.round((ams.getTime() - utc.getTime()) / 60000);
+  // True UTC instant = wall-clock interpreted at Amsterdam minus the offset.
+  const trueUTC = naiveUTC - offsetMin * 60000;
+  const out = new Date(trueUTC);
+  return isNaN(out.getTime()) ? '' : out.toISOString();
+}
+
 // Formats an ISO/UTC datetime as HH:MM in Amsterdam time.
 export function fmtAmsTime(iso: string): string {
   const d = new Date(iso);
