@@ -18,14 +18,14 @@ interface EconEvent {
 
 type FetchState =
   | { status: 'loading' }
-  | { status: 'no-key' }
   | { status: 'error'; message: string }
   | { status: 'ok'; events: EconEvent[] };
 
 const FMP_KEY = import.meta.env.VITE_FMP_API_KEY as string | undefined;
-// JBlanked: free economic calendar (Forex Factory / MQL5 / FxStreet sources).
-// Get a key at https://www.jblanked.com/api/key/  (free tier is rate-limited).
-const JBLANKED_KEY = import.meta.env.VITE_JBLANKED_API_KEY as string | undefined;
+// The economic calendar is served through our own Vercel serverless proxy at
+// /api/calendar (which calls JBlanked server-side). This avoids browser CORS
+// and keeps the JBlanked key off the client. No public env var needed here.
+const CALENDAR_PROXY = '/api/calendar';
 
 const CURRENCIES = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'] as const;
 const IMPACTS: Impact[] = ['High', 'Medium', 'Low'];
@@ -59,16 +59,13 @@ function parseJbDate(s: unknown): string {
   return isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
-// -- Source 1: JBlanked (free, Forex Factory data) -------------------------
+// -- Source 1: JBlanked via our Vercel proxy (no CORS, key stays server-side) -
 async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[]> {
-  const url = `https://www.jblanked.com/news/api/forex-factory/calendar/range/?from=${fromISO}&to=${toISO}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', Authorization: `Api-Key ${JBLANKED_KEY}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`JBlanked HTTP ${res.status}`);
+  const url = `${CALENDAR_PROXY}?from=${fromISO}&to=${toISO}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Calendar HTTP ${res.status}`);
   const arr = await res.json();
-  if (!Array.isArray(arr)) throw new Error('JBlanked: unexpected response');
+  if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
   return arr.map((e: Record<string, unknown>, i: number) => ({
     id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
     date: parseJbDate(e.Date),
@@ -114,13 +111,11 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
   throw new Error(lastErr || 'FMP fetch failed');
 }
 
-// Try JBlanked first (free), then FMP. Surfaces a clear message if both fail.
+// Try the proxy (JBlanked) first, then FMP if a key is present.
 async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const errors: string[] = [];
-  if (JBLANKED_KEY) {
-    try { return await fetchJBlanked(fromISO, toISO); }
-    catch (e) { errors.push(e instanceof Error ? e.message : 'JBlanked failed'); }
-  }
+  try { return await fetchJBlanked(fromISO, toISO); }
+  catch (e) { errors.push(e instanceof Error ? e.message : 'Calendar proxy failed'); }
   if (FMP_KEY) {
     try { return await fetchFmp(fromISO, toISO); }
     catch (e) { errors.push(e instanceof Error ? e.message : 'FMP failed'); }
@@ -135,7 +130,6 @@ export function EconomicCalendar() {
   const [impacts, setImpacts] = useState<Set<Impact>>(new Set(IMPACTS));
 
   const load = useCallback(async () => {
-    if (!JBLANKED_KEY && !FMP_KEY) { setState({ status: 'no-key' }); return; }
     setState({ status: 'loading' });
     try {
       const from = new Date();
@@ -223,11 +217,6 @@ export function EconomicCalendar() {
       {/* -- Body -- */}
       <div className="surface surface-lit p-0 overflow-hidden">
         {state.status === 'loading' && <div className="p-8 text-[13px] text-muted text-center">Loading economic calendar...</div>}
-        {state.status === 'no-key' && (
-          <div className="p-8 text-[13px] text-warn text-center">
-            No data source configured. Add <span className="text-txt">VITE_JBLANKED_API_KEY</span> (free, from jblanked.com) to enable the live economic calendar.
-          </div>
-        )}
         {state.status === 'error' && (
           <div className="p-8 text-[13px] text-bear text-center">
             Couldn't load the calendar ({state.message}).
