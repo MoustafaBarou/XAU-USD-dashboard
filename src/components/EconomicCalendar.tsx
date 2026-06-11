@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { computeGoldImpact, biasMarker } from '../lib/goldImpact';
+import { EventCountdown } from './EventCountdown';
 
 // -- Types -----------------------------------------------------------------
 type Impact = 'High' | 'Medium' | 'Low' | 'None';
@@ -7,7 +9,7 @@ type DayTab = 'today' | 'tomorrow' | 'week';
 interface EconEvent {
   id: string;
   date: string;          // ISO (UTC)
-  currency: string;      // USD, EUR, ...
+  currency: string;
   country: string;
   event: string;
   impact: Impact;
@@ -22,18 +24,15 @@ type FetchState =
   | { status: 'ok'; events: EconEvent[] };
 
 const FMP_KEY = import.meta.env.VITE_FMP_API_KEY as string | undefined;
-// The economic calendar is served through our own Vercel serverless proxy at
-// /api/calendar (which calls JBlanked server-side). This avoids browser CORS
-// and keeps the JBlanked key off the client. No public env var needed here.
 const CALENDAR_PROXY = '/api/calendar';
 
 const CURRENCIES = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'] as const;
 const IMPACTS: Impact[] = ['High', 'Medium', 'Low'];
 
 const impactColor: Record<Impact, string> = {
-  High: '#FF4D6D',     // red
-  Medium: '#FFC857',   // orange
-  Low: '#FFE66D',      // yellow
+  High: '#FF4D6D',
+  Medium: '#FFC857',
+  Low: '#FFE66D',
   None: '#8A93A6',
 };
 
@@ -51,7 +50,6 @@ function val(v: unknown): number | string | null {
   return typeof v === 'number' ? v : String(v);
 }
 
-// JBlanked dates look like "2024.02.08 15:30:00" (UTC). Convert to ISO.
 function parseJbDate(s: unknown): string {
   const str = String(s ?? '');
   const iso = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})\s+(.+)$/, '$1-$2-$3T$4Z');
@@ -59,7 +57,6 @@ function parseJbDate(s: unknown): string {
   return isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
-// -- Source 1: JBlanked via our Vercel proxy (no CORS, key stays server-side) -
 async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const url = `${CALENDAR_PROXY}?from=${fromISO}&to=${toISO}`;
   const res = await fetch(url, { cache: 'no-store' });
@@ -79,7 +76,6 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   }));
 }
 
-// -- Source 2: FMP (works only on plans that include the economic calendar) -
 async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const endpoints = [
     `https://financialmodelingprep.com/stable/economic-calendar?from=${fromISO}&to=${toISO}&apikey=${FMP_KEY}`,
@@ -111,7 +107,6 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
   throw new Error(lastErr || 'FMP fetch failed');
 }
 
-// Try the proxy (JBlanked) first, then FMP if a key is present.
 async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const errors: string[] = [];
   try { return await fetchJBlanked(fromISO, toISO); }
@@ -164,7 +159,7 @@ export function EconomicCalendar() {
         const day = e.date.slice(0, 10);
         if (tab === 'today') return day === todayStr;
         if (tab === 'tomorrow') return day === tomorrowStr;
-        return true; // week
+        return true;
       })
       .filter((e) => currency === 'All' || e.currency === currency)
       .filter((e) => impacts.has(e.impact) || e.impact === 'None')
@@ -228,18 +223,22 @@ export function EconomicCalendar() {
         )}
         {state.status === 'ok' && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            {/* header (desktop) */}
-            <div className="hidden md:grid grid-cols-[80px_70px_90px_1fr_110px_110px_110px] gap-3 px-5 py-3 text-[10px] uppercase tracking-[0.14em] text-muted/70 border-b border-white/[0.06]">
+            <div className="hidden md:grid grid-cols-[80px_70px_80px_1fr_90px_90px_90px_120px] gap-3 px-5 py-3 text-[10px] uppercase tracking-[0.14em] text-muted/70 border-b border-white/[0.06]">
               <span>Time</span><span>Currency</span><span>Impact</span><span>Event</span>
               <span className="text-right">Previous</span><span className="text-right">Forecast</span><span className="text-right">Actual</span>
+              <span>Gold</span>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {filtered.map((e) => {
                 const t = e.date ? new Date(e.date) : null;
                 const time = t ? t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const gi = computeGoldImpact({ event: e.event, actual: e.actual, estimate: e.estimate, previous: e.previous });
+                const giColor = gi.bias === 'Bullish Gold' ? '#00D98B' : gi.bias === 'Bearish Gold' ? '#FF4D6D' : '#8A93A6';
+                const upcoming = !!t && t.getTime() > Date.now();
+                const showCountdown = upcoming && e.impact === 'High';
                 return (
                   <div key={e.id}
-                    className="grid grid-cols-2 md:grid-cols-[80px_70px_90px_1fr_110px_110px_110px] gap-x-3 gap-y-1.5 px-4 md:px-5 py-3 text-[13px] hover:bg-white/[0.02] transition-colors">
+                    className="grid grid-cols-2 md:grid-cols-[80px_70px_80px_1fr_90px_90px_90px_120px] gap-x-3 gap-y-1.5 px-4 md:px-5 py-3 text-[13px] hover:bg-white/[0.02] transition-colors">
                     <span className="tnum text-txt2 md:text-txt">{time}<span className="text-muted/50 text-[10px] ml-1">UTC</span></span>
                     <span className="font-700 text-txt">{e.currency}</span>
                     <span className="flex items-center">
@@ -248,11 +247,22 @@ export function EconomicCalendar() {
                         {e.impact}
                       </span>
                     </span>
-                    <span className="col-span-2 md:col-span-1 text-txt2 md:text-txt order-last md:order-none">{e.event}</span>
+                    <span className="col-span-2 md:col-span-1 text-txt2 md:text-txt order-last md:order-none">
+                      {e.event}
+                      {showCountdown && (
+                        <span className="ml-2 text-[11px] text-gold">⏳ <EventCountdown target={e.date} /></span>
+                      )}
+                    </span>
                     <span className="tnum text-muted md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Prev</span>{e.previous ?? '-'}</span>
                     <span className="tnum text-txt2 md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Fcst</span>{e.estimate ?? '-'}</span>
                     <span className="tnum md:text-right font-700" style={{ color: e.actual !== null ? '#FFFFFF' : '#8A93A6' }}>
                       <span className="md:hidden text-[10px] uppercase mr-1 font-400">Act</span>{e.actual ?? '-'}
+                    </span>
+                    <span className="flex items-center gap-1.5" title={gi.reason}>
+                      <span>{biasMarker(gi.bias)}</span>
+                      <span className="text-[11px] font-600" style={{ color: giColor }}>
+                        {gi.bias === 'Bullish Gold' ? 'Bullish' : gi.bias === 'Bearish Gold' ? 'Bearish' : 'Neutral'}
+                      </span>
                     </span>
                   </div>
                 );
