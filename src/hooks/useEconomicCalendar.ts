@@ -67,10 +67,15 @@ async function fetchEvents(): Promise<CalEvent[]> {
   if (!Array.isArray(arr)) throw new Error('Calendar: unexpected response');
   const mapped = arr.map((e: Record<string, unknown>, i: number) => {
     const date = parseJbDate(e.Date);
-    // JBlanked returns 0 (not null) for the actual of events that have not been
-    // released yet. Any event still in the future cannot have an actual, so we
-    // treat it as pending (null) regardless of the placeholder value.
-    const isFuture = date !== '' && new Date(date).getTime() > Date.now();
+    // An actual value is only trustworthy once JBlanked has actually released
+    // the event. JBlanked sends 0 as a placeholder before release, so we rely
+    // on two signals: the event time must be in the past AND the Outcome field
+    // (e.g. "Actual > Forecast > Previous") must be populated, which JBlanked
+    // only fills after the data is published.
+    const outcome = String(e.Outcome ?? '').trim();
+    const isPast = date !== '' && new Date(date).getTime() <= Date.now();
+    const hasOutcome = outcome !== '' && outcome.toLowerCase() !== 'none';
+    const released = isPast && hasOutcome;
     const rawActual = val(e.Actual);
     return {
       id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
@@ -78,7 +83,7 @@ async function fetchEvents(): Promise<CalEvent[]> {
       currency: String(e.Currency ?? '-'),
       event: String(e.Name ?? 'Unknown event'),
       impact: normalizeImpact(e.Impact),
-      actual: isFuture ? null : rawActual,
+      actual: released ? rawActual : null,
       estimate: val(e.Forecast),
       previous: val(e.Previous),
     };
