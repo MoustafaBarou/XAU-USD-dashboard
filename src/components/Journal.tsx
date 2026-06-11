@@ -5,13 +5,23 @@ import { useAuthContext } from '../lib/AuthContext';
 
 // Draft uses strings for the inputs; numeric fields are parsed on save.
 interface Draft { date: string; bias: string; setup: string; entry: string; exit: string; result: string; lessons: string; }
-const FIELDS: { key: keyof Draft; label: string; wide?: boolean; type?: string }[] = [
-  { key: 'date', label: 'Date', type: 'date' }, { key: 'bias', label: 'Bias' },
-  { key: 'setup', label: 'Setup', wide: true }, { key: 'entry', label: 'Entry' },
-  { key: 'exit', label: 'Exit' }, { key: 'result', label: 'Result' },
+
+// 'select' fields render a dropdown; everything else is a text/date input.
+type FieldKind = 'text' | 'date' | 'select';
+const FIELDS: { key: keyof Draft; label: string; wide?: boolean; kind?: FieldKind; options?: string[]; placeholder?: string }[] = [
+  { key: 'date', label: 'Date', kind: 'date' },
+  { key: 'bias', label: 'Bias', kind: 'select', options: ['Long', 'Short'], placeholder: 'Select Bias' },
+  { key: 'setup', label: 'Setup', wide: true, kind: 'select', options: ['Intraday', 'Scalp', 'Swing'], placeholder: 'Select Setup' },
+  { key: 'entry', label: 'Entry' },
+  { key: 'exit', label: 'Exit' },
+  { key: 'result', label: 'Result' },
   { key: 'lessons', label: 'Lessons Learned', wide: true },
 ];
 const blank: Draft = { date: '', bias: '', setup: '', entry: '', exit: '', result: '', lessons: '' };
+
+// Shared field styling — identical for inputs and selects.
+const FIELD_CLASS =
+  'w-full mt-2 bg-transparent border-b border-white/15 px-1 py-1.5 text-[14px] text-txt focus:border-gold/60 outline-none transition-colors [color-scheme:dark]';
 
 function toDraft(row: JournalEntry): Draft {
   return {
@@ -114,9 +124,25 @@ export function Journal() {
             {FIELDS.map((f) => (
               <div key={f.key} className={f.wide ? 'col-span-2 md:col-span-3' : ''}>
                 <label className="text-[10px] uppercase tracking-[0.16em] text-muted">{f.label}</label>
-                <input type={f.type ?? 'text'} value={draft[f.key]}
-                  onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                  className="w-full mt-2 bg-transparent border-b border-white/15 px-1 py-1.5 text-[14px] text-txt focus:border-gold/60 outline-none transition-colors [color-scheme:dark]" />
+                {f.kind === 'select' ? (
+                  <select
+                    value={draft[f.key]}
+                    onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                    className={FIELD_CLASS}
+                  >
+                    <option value="" disabled className="bg-bg text-muted">{f.placeholder}</option>
+                    {f.options!.map((opt) => (
+                      <option key={opt} value={opt} className="bg-bg text-txt">{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={f.kind ?? 'text'}
+                    value={draft[f.key]}
+                    onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                    className={FIELD_CLASS}
+                  />
+                )}
               </div>
             ))}
           </div>
