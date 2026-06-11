@@ -1,4 +1,4 @@
-import { LiveCalendar } from '../components/LiveCalendar';
+import { EconomicCalendar } from '../components/EconomicCalendar';
 import { PageHeader } from './PageShell';
 
 export function EconomicCalendarPage() {
@@ -6,12 +6,10 @@ export function EconomicCalendarPage() {
     <div>
       <PageHeader
         title="Economic Calendar"
-        description="Live high-impact macro releases that move gold — CPI, FOMC, NFP, yields — with consensus, prior and actual. Auto-refreshing from a real data source."
+        description="Live macro releases that move the market — CPI, FOMC, NFP and more — with previous, forecast and actual. Filter by day, currency and impact."
       />
       <div className="rule my-8" />
-      <div className="max-w-5xl">
-        <LiveCalendar />
-      </div>
+      <EconomicCalendar />
     </div>
   );
 }
