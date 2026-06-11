@@ -1,5 +1,6 @@
 import { GoldBar } from './Brand';
 import { NAV_ITEMS, type NavItem } from '../nav';
+import { AccountWidget } from './AccountWidget';
 
 export function Sidebar({ active, onSelect }: { active: NavItem; onSelect: (s: NavItem) => void }) {
   return (
@@ -26,7 +27,11 @@ export function Sidebar({ active, onSelect }: { active: NavItem; onSelect: (s: N
         })}
       </nav>
 
-      <div className="px-6 py-5 border-t border-white/[0.06] text-[10px] text-muted space-y-1.5">
+      <div className="px-4 pt-4 pb-3 border-t border-white/[0.06]">
+        <AccountWidget />
+      </div>
+
+      <div className="px-6 py-4 border-t border-white/[0.06] text-[10px] text-muted space-y-1.5">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-bull" style={{ boxShadow: '0 0 8px #00D98B' }} />
           <span className="tracking-wide">FEED · gold-api.com</span>

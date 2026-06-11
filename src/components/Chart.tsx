@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { Eyebrow } from './ui';
 
+/**
+ * First-class TradingView chart.
+ * We give the widget an explicit pixel height (not autosize) and force the
+ * injected iframe to fill its container, so it renders full-size instead of a
+ * thin strip.
+ */
 export function Chart({ height = 560 }: { height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -9,6 +15,7 @@ export function Chart({ height = 560 }: { height?: number }) {
     if (!host) return;
     host.innerHTML = '';
 
+    // TradingView expects this exact wrapper structure.
     const widget = document.createElement('div');
     widget.className = 'tradingview-widget-container';
     widget.style.height = '100%';
@@ -51,6 +58,7 @@ export function Chart({ height = 560 }: { height?: number }) {
         <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">XAU / USD · Live Chart</h3>
         <Eyebrow>TradingView</Eyebrow>
       </div>
+      {/* explicit height so the iframe has a real box to fill */}
       <div
         ref={ref}
         className="rounded-2xl overflow-hidden flex-1 [&_iframe]:!h-full [&_iframe]:!w-full"

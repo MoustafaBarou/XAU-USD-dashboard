@@ -7,6 +7,7 @@ import { Chart } from '../components/Chart';
 import { DriverMatrix } from '../components/DriverMatrix';
 import { AiOverview } from '../components/Intelligence';
 import type { GoldState } from '../hooks/useGoldFeed';
+import type { Quote } from '../services/priceService';
 
 function greeting() {
   const h = new Date().getHours();
@@ -14,7 +15,7 @@ function greeting() {
 }
 function Rule() { return <div className="rule my-12" />; }
 
-export function DashboardPage({ g }: { g: GoldState }) {
+export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | null; us10y?: Quote | null }) {
   const live = g.status === 'connected' && g.price !== null;
   return (
     <div className="pb-6">
@@ -55,10 +56,10 @@ export function DashboardPage({ g }: { g: GoldState }) {
       </div>
 
       <Rule />
-      <BiasEngine g={g} />
+      <BiasEngine g={g} dxy={dxy} us10y={us10y} />
 
       <Rule />
-      <div className="min-h-[480px]"><Chart height={480} /></div>
+      <Chart height={560} />
 
       <Rule />
       <DriverMatrix />

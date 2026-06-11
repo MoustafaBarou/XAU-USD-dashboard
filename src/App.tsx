@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGoldFeed } from './hooks/useGoldFeed';
+import { useMacroData } from './hooks/useMacroData';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { TerminalBar } from './components/TerminalBar';
@@ -17,12 +18,13 @@ import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   const g = useGoldFeed();
+  const macro = useMacroData();
   const [active, setActive] = useState<NavItem>('Dashboard');
 
   // Render switch — each sidebar selection shows a distinct page.
   function renderPage() {
     switch (active) {
-      case 'Dashboard':         return <DashboardPage g={g} />;
+      case 'Dashboard':         return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} />;
       case 'Reports':           return <ReportsPage />;
       case 'Calendar':          return <CalendarPage />;
       case 'Macro Desk':        return <MacroDeskPage />;
@@ -31,7 +33,7 @@ export default function App() {
       case 'Market Mood':       return <MarketMoodPage />;
       case 'Journal':           return <JournalPage />;
       case 'Settings':          return <SettingsPage />;
-      default:                  return <DashboardPage g={g} />;
+      default:                  return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} />;
     }
   }
 
@@ -43,7 +45,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        <TerminalBar g={g} />
+        <TerminalBar g={g} dxy={macro.dxy} us10y={macro.us10y} />
 
         {/* Mobile / narrow-viewport navigation (sidebar is hidden below lg) */}
         <MobileNav active={active} onSelect={setActive} />
