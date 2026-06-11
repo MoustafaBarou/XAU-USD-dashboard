@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 
-// ── Types ─────────────────────────────────────────────────────────────────
+// -- Types -----------------------------------------------------------------
 type Impact = 'High' | 'Medium' | 'Low' | 'None';
 type DayTab = 'today' | 'tomorrow' | 'week';
 
@@ -59,7 +59,7 @@ function parseJbDate(s: unknown): string {
   return isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
-// ── Source 1: JBlanked (free, Forex Factory data) ─────────────────────────
+// -- Source 1: JBlanked (free, Forex Factory data) -------------------------
 async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const url = `https://www.jblanked.com/news/api/forex-factory/calendar/range/?from=${fromISO}&to=${toISO}`;
   const res = await fetch(url, {
@@ -72,8 +72,8 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   return arr.map((e: Record<string, unknown>, i: number) => ({
     id: `${e.Name ?? 'evt'}-${e.Date ?? i}-${i}`,
     date: parseJbDate(e.Date),
-    currency: String(e.Currency ?? '—'),
-    country: String(e.Currency ?? '—'),
+    currency: String(e.Currency ?? '-'),
+    country: String(e.Currency ?? '-'),
     event: String(e.Name ?? 'Unknown event'),
     impact: normalizeImpact(e.Impact),
     actual: val(e.Actual),
@@ -82,7 +82,7 @@ async function fetchJBlanked(fromISO: string, toISO: string): Promise<EconEvent[
   }));
 }
 
-// ── Source 2: FMP (works only on plans that include the economic calendar) ─
+// -- Source 2: FMP (works only on plans that include the economic calendar) -
 async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
   const endpoints = [
     `https://financialmodelingprep.com/stable/economic-calendar?from=${fromISO}&to=${toISO}&apikey=${FMP_KEY}`,
@@ -93,7 +93,7 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       lastErr = res.status === 403
-        ? 'FMP 403 — your plan does not include the economic calendar.'
+        ? 'FMP 403 - your plan does not include the economic calendar.'
         : `FMP HTTP ${res.status}`;
       continue;
     }
@@ -102,8 +102,8 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
     return arr.map((e: Record<string, unknown>, i: number) => ({
       id: `${e.event ?? 'evt'}-${e.date ?? i}-${i}`,
       date: String(e.date ?? ''),
-      currency: String(e.currency ?? e.country ?? '—'),
-      country: String(e.country ?? e.currency ?? '—'),
+      currency: String(e.currency ?? e.country ?? '-'),
+      country: String(e.country ?? e.currency ?? '-'),
       event: String(e.event ?? 'Unknown event'),
       impact: normalizeImpact(e.impact),
       actual: val(e.actual),
@@ -125,7 +125,7 @@ async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[
     try { return await fetchFmp(fromISO, toISO); }
     catch (e) { errors.push(e instanceof Error ? e.message : 'FMP failed'); }
   }
-  throw new Error(errors.join(' · ') || 'No data source available');
+  throw new Error(errors.join(' - ') || 'No data source available');
 }
 
 export function EconomicCalendar() {
@@ -179,7 +179,7 @@ export function EconomicCalendar() {
 
   return (
     <div className="space-y-5">
-      {/* ── Day tabs ── */}
+      {/* -- Day tabs -- */}
       <div className="flex gap-1 surface p-1 rounded-xl w-full md:w-auto md:inline-flex">
         {([['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'This Week']] as [DayTab, string][]).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
@@ -191,7 +191,7 @@ export function EconomicCalendar() {
         ))}
       </div>
 
-      {/* ── Filters ── */}
+      {/* -- Filters -- */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
         <div className="flex flex-wrap gap-1.5">
           {CURRENCIES.map((c) => (
@@ -220,9 +220,9 @@ export function EconomicCalendar() {
         </div>
       </div>
 
-      {/* ── Body ── */}
+      {/* -- Body -- */}
       <div className="surface surface-lit p-0 overflow-hidden">
-        {state.status === 'loading' && <div className="p-8 text-[13px] text-muted text-center">Loading economic calendar…</div>}
+        {state.status === 'loading' && <div className="p-8 text-[13px] text-muted text-center">Loading economic calendar...</div>}
         {state.status === 'no-key' && (
           <div className="p-8 text-[13px] text-warn text-center">
             No data source configured. Add <span className="text-txt">VITE_JBLANKED_API_KEY</span> (free, from jblanked.com) to enable the live economic calendar.
@@ -230,7 +230,7 @@ export function EconomicCalendar() {
         )}
         {state.status === 'error' && (
           <div className="p-8 text-[13px] text-bear text-center">
-            Couldn’t load the calendar ({state.message}).
+            Couldn't load the calendar ({state.message}).
             <button onClick={load} className="ml-2 text-greenSoft hover:underline">Retry</button>
           </div>
         )}
@@ -247,7 +247,7 @@ export function EconomicCalendar() {
             <div className="divide-y divide-white/[0.04]">
               {filtered.map((e) => {
                 const t = e.date ? new Date(e.date) : null;
-                const time = t ? t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '—';
+                const time = t ? t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
                 return (
                   <div key={e.id}
                     className="grid grid-cols-2 md:grid-cols-[80px_70px_90px_1fr_110px_110px_110px] gap-x-3 gap-y-1.5 px-4 md:px-5 py-3 text-[13px] hover:bg-white/[0.02] transition-colors">
@@ -260,5 +260,22 @@ export function EconomicCalendar() {
                       </span>
                     </span>
                     <span className="col-span-2 md:col-span-1 text-txt2 md:text-txt order-last md:order-none">{e.event}</span>
-                    <span className="tnum text-muted md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Prev</span>{e.previous ?? '—'}</span>
-                    <span className="tnum text-txt2 m
+                    <span className="tnum text-muted md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Prev</span>{e.previous ?? '-'}</span>
+                    <span className="tnum text-txt2 md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Fcst</span>{e.estimate ?? '-'}</span>
+                    <span className="tnum md:text-right font-700" style={{ color: e.actual !== null ? '#FFFFFF' : '#8A93A6' }}>
+                      <span className="md:hidden text-[10px] uppercase mr-1 font-400">Act</span>{e.actual ?? '-'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="text-[10px] text-muted/55">
+        Live data from JBlanked (Forex Factory) - times shown in UTC.
+      </div>
+    </div>
+  );
+}
