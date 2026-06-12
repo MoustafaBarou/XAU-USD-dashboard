@@ -199,31 +199,37 @@ async function fetchNewsApi(): Promise<NewsItem[]> {
 
 
 async function fetchFmp(): Promise<NewsItem[]> {
-  // FMP general + forex news, filtered to gold/macro topics.
-  const url = `https://financialmodelingprep.com/api/v3/fmp/articles?page=0&size=50&apikey=${FMP_KEY}`;
+  // FMP "stable" Forex News endpoint (works on the Starter plan). Returns a flat
+  // array of: { symbol, publishedDate, publisher, title, image, site, text, url }.
+  const url = `https://financialmodelingprep.com/stable/news/forex-latest?apikey=${FMP_KEY}`;
   const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`FMP news HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`FMP forex news HTTP ${res.status}`);
   const data = await res.json();
-  const arr: any[] = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+  // Stable endpoints return a flat array; keep a defensive fallback for {content}.
+  const arr: any[] = Array.isArray(data) ? data : (Array.isArray(data?.content) ? data.content : []);
+
   return arr
-    .filter((a) => TOPIC_RE.test(`${a.title} ${a.text ?? a.content ?? ''}`))
-    .slice(0, 20)
+    .slice(0, 30)
     .map((a, i) => {
       const title = a.title ?? '';
-      const snippet = (a.text ?? a.content ?? '').replace(/<[^>]+>/g, '').slice(0, 200);
-      const impact = deriveGoldImpact(title, snippet);
+      // Strip any HTML and collapse to a short snippet for the impact heuristic.
+      const snippet = String(a.text ?? a.content ?? '').replace(/<[^>]+>/g, '').trim().slice(0, 220);
+      const symbol = typeof a.symbol === 'string' ? a.symbol : '';
+      // Run the gold-impact heuristic over the headline + symbol + snippet.
+      const impact = deriveGoldImpact(`${symbol} ${title}`, snippet);
       return {
         id: a.url ?? `fmp-${i}`,
         title,
-        source: a.site ?? a.publisher ?? 'FMP',
+        source: a.publisher || a.site || (symbol ? `FMP · ${symbol}` : 'FMP'),
         url: a.url ?? '#',
-        publishedAt: a.date ?? new Date().toISOString(),
+        publishedAt: a.publishedDate ?? a.date ?? new Date().toISOString(),
         sentiment: impact.sentiment,
-        impactScore: Math.max(impact.impact, relevance(title, snippet)),
+        impactScore: Math.max(impact.impact, relevance(`${symbol} ${title}`, snippet)),
         reason: impact.reason,
         snippet,
       } as NewsItem;
-    });
+    })
+    .slice(0, 20);
 }
 
 /** Fetch the freshest gold/macro news from the first available provider. */
