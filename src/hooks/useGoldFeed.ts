@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFeed, type FeedStatus, type Tick } from '../feed';
+import { usePreferences } from '../lib/PreferencesContext';
 
 export interface GoldState {
   status: FeedStatus;
@@ -28,9 +29,15 @@ export function useGoldFeed() {
     dayOpen: null, weekRef: null, high: null, low: null, atr: null, history: [],
   });
   const prev = useRef<number | null>(null);
+  // Data-source selection comes from user preferences. Defaults to 'gold-api'
+  // so the existing keyless spot feed is never broken. A bridge URL (if set)
+  // is passed through for the MT5 provider.
+  const { prefs } = usePreferences();
+  const provider = prefs.feedProvider;
+  const wsUrl = prefs.mt5BridgeUrl ?? undefined;
 
   useEffect(() => {
-    const feed = createFeed('gold-api');
+    const feed = createFeed(provider, { wsUrl });
     const offStatus = feed.onStatus((status, detail) =>
       setState((s) => ({ ...s, status, detail }))
     );
@@ -62,7 +69,7 @@ export function useGoldFeed() {
     feed.connect();
     feed.subscribe('XAU/USD');
     return () => { offStatus(); offTick(); feed.disconnect(); };
-  }, []);
+  }, [provider, wsUrl]);
 
   return state;
 }

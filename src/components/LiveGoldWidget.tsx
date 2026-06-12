@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AreaChart, Area, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useLiveGold } from '../lib/liveGold';
+import { usePreferences } from '../lib/PreferencesContext';
 
-const fmt2 = (n: number | null) => (n === null ? '--' : n.toFixed(2));
-const fmtSigned = (n: number | null) => (n === null ? '--' : (n >= 0 ? '+' : '') + n.toFixed(2));
 const fmtPct = (n: number | null) => (n === null ? '--' : (n >= 0 ? '+' : '') + n.toFixed(2) + '%');
 
 type TF = '1H' | '4H' | '1D';
@@ -11,7 +10,12 @@ const TF_MS: Record<TF, number> = { '1H': 3_600_000, '4H': 14_400_000, '1D': 86_
 
 export function LiveGoldWidget() {
   const g = useLiveGold();
+  const { prefs, formatPrice } = usePreferences();
   const [tf, setTf] = useState<TF>('1H');
+
+  // Prices honour the user's decimal-precision preference.
+  const fmt = (n: number | null) => formatPrice(n);
+  const fmtSigned = (n: number | null) => (n === null ? '--' : (n >= 0 ? '+' : '') + formatPrice(n));
 
   const up = (g.changeAbs ?? 0) >= 0;
   const accent = g.changeAbs === null ? '#8A93A6' : up ? '#00D98B' : '#FF4D6D';
@@ -43,7 +47,7 @@ export function LiveGoldWidget() {
           </div>
           <div className="flex items-end gap-3 mt-2">
             <span className="font-sora font-800 tnum leading-none" style={{ fontSize: 'clamp(30px,4vw,44px)', color: '#FFFFFF' }}>
-              {g.price === null ? 'NO FEED' : g.price.toFixed(2)}
+              {g.price === null ? 'NO FEED' : fmt(g.price)}
             </span>
             <span className="font-sora font-700 tnum pb-1" style={{ color: accent, fontSize: '16px' }}>
               {fmtPct(g.changePct)}
@@ -54,13 +58,15 @@ export function LiveGoldWidget() {
           </div>
         </div>
 
-        {/* bid / ask / spread block */}
+        {/* bid / ask / spread block — Spread hidden when the user disables it */}
         <div className="grid grid-cols-3 gap-x-5 gap-y-1 text-right">
-          <Stat label="Bid" value={fmt2(g.bid)} />
-          <Stat label="Ask" value={fmt2(g.ask)} />
-          <Stat label="Spread" value={fmt2(g.spread)} />
-          <Stat label="High" value={fmt2(g.high)} />
-          <Stat label="Low" value={fmt2(g.low)} />
+          <Stat label="Bid" value={fmt(g.bid)} />
+          <Stat label="Ask" value={fmt(g.ask)} />
+          {prefs.showSpread
+            ? <Stat label="Spread" value={fmt(g.spread)} />
+            : <div />}
+          <Stat label="High" value={fmt(g.high)} />
+          <Stat label="Low" value={fmt(g.low)} />
           <Stat label="Feed" value={g.provider === 'Twelve Data' ? 'TD WS' : 'spot'} subtle />
         </div>
       </div>
@@ -95,7 +101,7 @@ export function LiveGoldWidget() {
                 <Tooltip
                   contentStyle={{ background: '#0D1218', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
                   labelFormatter={() => ''}
-                  formatter={(v) => [Number(v).toFixed(2), 'XAU/USD']}
+                  formatter={(v) => [fmt(Number(v)), 'XAU/USD']}
                 />
                 <Area type="monotone" dataKey="p" stroke={accent} strokeWidth={2} fill="url(#lgFill)" isAnimationActive={false} dot={false} />
               </AreaChart>

@@ -1,6 +1,7 @@
 import type { GoldState } from '../hooks/useGoldFeed';
 import type { InstrumentMap, InstrumentKey } from '../services/priceService';
 import { SymbolBadge } from './SymbolBadge';
+import { usePreferences } from '../lib/PreferencesContext';
 
 /**
  * Persistent top terminal bar (Bloomberg-style tape).
@@ -38,12 +39,15 @@ const TAPE_ORDER: { key: InstrumentKey; sym: string }[] = [
 ];
 
 export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: InstrumentMap | null }) {
+  const { prefs } = usePreferences();
   const xauDelta = g.price !== null && g.dayOpen ? ((g.price - g.dayOpen) / g.dayOpen) * 100 : null;
   const xauDeltaAbs = g.price !== null && g.dayOpen ? g.price - g.dayOpen : null;
   const xauLive = g.status === 'connected' && g.price !== null;
 
   const rows: Row[] = [
-    { sym: 'XAUUSD', value: g.price, delta: xauDelta, deltaAbs: xauDeltaAbs, unit: '', digits: 2, live: xauLive, unavailable: !xauLive && g.status === 'error' },
+    // XAU follows the user's decimal-precision preference; macro instruments
+    // below keep their own instrument-defined digits (forex 4 / index 2).
+    { sym: 'XAUUSD', value: g.price, delta: xauDelta, deltaAbs: xauDeltaAbs, unit: '', digits: prefs.decimalPrecision, live: xauLive, unavailable: !xauLive && g.status === 'error' },
   ];
 
   for (const t of TAPE_ORDER) {

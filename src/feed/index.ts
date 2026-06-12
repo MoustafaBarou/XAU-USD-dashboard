@@ -7,6 +7,10 @@ export type ProviderId = 'auto' | 'twelvedata' | 'gold-api' | 'mt5-bridge';
 
 const TWELVEDATA_KEY = import.meta.env.VITE_TWELVEDATA_API_KEY as string | undefined;
 
+/** True when a Twelve Data key is configured, so the UI can show it as a
+ *  selectable (connected) data source rather than "not connected". */
+export const TWELVEDATA_AVAILABLE = !!TWELVEDATA_KEY;
+
 export function createFeed(provider: ProviderId = 'auto', opts?: { wsUrl?: string }): MarketFeed {
   switch (provider) {
     case 'mt5-bridge':

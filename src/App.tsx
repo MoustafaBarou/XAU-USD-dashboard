@@ -4,6 +4,7 @@ import { useMacroData } from './hooks/useMacroData';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { TerminalBar } from './components/TerminalBar';
+import { AlertWatcher } from './components/AlertWatcher';
 import type { NavItem } from './nav';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -40,6 +41,8 @@ export default function App() {
         <div className="vignette" /><div className="grain" />
       </div>
       <div className="relative z-10">
+        {/* In-app alert engine — fires toasts while the app is open. Renders nothing. */}
+        <AlertWatcher g={g} />
         <TerminalBar g={g} instruments={macro.instruments} />
         {/* Mobile / narrow-viewport navigation (sidebar is hidden below lg) */}
         <MobileNav active={active} onSelect={setActive} />

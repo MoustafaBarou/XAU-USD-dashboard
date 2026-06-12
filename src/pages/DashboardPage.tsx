@@ -10,6 +10,7 @@ import { DashboardMood } from '../components/DashboardMood';
 import { LiveGoldWidget } from '../components/LiveGoldWidget';
 import { Eyebrow } from '../components/ui';
 import { useAuthContext } from '../lib/AuthContext';
+import { usePreferences } from '../lib/PreferencesContext';
 import { resolveDisplayName, timeGreeting } from '../lib/userName';
 import type { GoldState } from '../hooks/useGoldFeed';
 import type { Quote, InstrumentMap } from '../services/priceService';
@@ -22,6 +23,7 @@ const DESK_DATE = new Intl.DateTimeFormat('en-GB', {
 
 export function DashboardPage({ g, dxy, us10y, instruments }: { g: GoldState; dxy?: Quote | null; us10y?: Quote | null; instruments?: InstrumentMap | null }) {
   const { user } = useAuthContext();
+  const { formatPrice } = usePreferences();
   const name = resolveDisplayName(user);
   const live = g.status === 'connected' && g.price !== null;
   return (
@@ -42,7 +44,7 @@ export function DashboardPage({ g, dxy, us10y, instruments }: { g: GoldState; dx
           {live && (
             <span className="card px-3.5 py-2 flex items-center gap-2 text-[12px]">
               <span className="h-2 w-2 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 8px #4ADE80' }} />
-              <span className="tnum font-700 text-txt">{g.price!.toFixed(2)}</span>
+              <span className="tnum font-700 text-txt">{formatPrice(g.price)}</span>
               <span className="text-muted tracking-wide">XAU/USD</span>
             </span>
           )}

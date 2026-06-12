@@ -73,3 +73,17 @@ export interface WatchlistItem {
   note: string | null;
   created_at: string;
 }
+
+export interface UserSettings {
+  user_id: string;
+  decimal_precision: number;
+  show_spread: boolean;
+  reduced_motion: boolean;
+  price_alert_enabled: boolean;
+  price_alert_above: number | null;
+  price_alert_below: number | null;
+  bias_alert_enabled: boolean;
+  feed_provider: string;        // ProviderId — 'gold-api' | 'twelvedata' | 'mt5-bridge' | 'auto'
+  mt5_bridge_url: string | null;
+  updated_at: string;
+}
