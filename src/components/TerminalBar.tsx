@@ -1,20 +1,21 @@
 import type { GoldState } from '../hooks/useGoldFeed';
-import type { Quote } from '../services/priceService';
+import type { InstrumentMap, InstrumentKey } from '../services/priceService';
 
 /**
  * Persistent top terminal bar (Bloomberg-style tape).
- * XAUUSD (gold-api), DXY and US10Y (FMP) are genuinely live when their feeds
- * are connected. Instruments without a wired feed show "no feed". When a feed
- * is configured but the request fails, the value shows "DATA UNAVAILABLE".
- * Nothing is fabricated.
+ * XAUUSD is live from the realtime gold feed. DXY, US10Y, US02Y, SPX, NASDAQ
+ * and VIX are live from FMP when the request succeeds. When a feed is configured
+ * but returns no data / is premium-gated, that instrument shows "DATA UNAVAILABLE".
+ * When no key is configured at all it shows "no feed". Nothing is fabricated.
  */
-interface Instrument {
+interface Row {
   sym: string;
   value: number | null;
-  delta: number | null;
+  delta: number | null;       // change %
+  deltaAbs: number | null;    // change $ (absolute)
   unit: string;
   live: boolean;
-  unavailable: boolean;   // feed configured but no data
+  unavailable: boolean;
 }
 
 function fmtVal(v: number | null, unit: string) {
@@ -22,24 +23,41 @@ function fmtVal(v: number | null, unit: string) {
   return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (unit === '%' ? '%' : '');
 }
 
-export function TerminalBar({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | null; us10y?: Quote | null }) {
+const TAPE_ORDER: { key: InstrumentKey; sym: string }[] = [
+  { key: 'DXY', sym: 'DXY' },
+  { key: 'US10Y', sym: 'US10Y' },
+  { key: 'US02Y', sym: 'US02Y' },
+  { key: 'SPX', sym: 'SPX' },
+  { key: 'NASDAQ', sym: 'NASDAQ' },
+  { key: 'VIX', sym: 'VIX' },
+];
+
+export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: InstrumentMap | null }) {
   const xauDelta = g.price !== null && g.dayOpen ? ((g.price - g.dayOpen) / g.dayOpen) * 100 : null;
+  const xauDeltaAbs = g.price !== null && g.dayOpen ? g.price - g.dayOpen : null;
   const xauLive = g.status === 'connected' && g.price !== null;
 
-  const instruments: Instrument[] = [
-    { sym: 'XAUUSD', value: g.price, delta: xauDelta, unit: '', live: xauLive, unavailable: !xauLive },
-    { sym: 'DXY',    value: dxy?.value ?? null, delta: dxy?.changePct ?? null, unit: '', live: !!dxy?.available, unavailable: dxy ? !dxy.available : false },
-    { sym: 'US10Y',  value: us10y?.value ?? null, delta: us10y?.changePct ?? null, unit: '%', live: !!us10y?.available, unavailable: us10y ? !us10y.available : false },
-    { sym: 'US02Y',  value: null, delta: null, unit: '%', live: false, unavailable: false },
-    { sym: 'SPX',    value: null, delta: null, unit: '', live: false, unavailable: false },
-    { sym: 'NASDAQ', value: null, delta: null, unit: '', live: false, unavailable: false },
-    { sym: 'VIX',    value: null, delta: null, unit: '', live: false, unavailable: false },
+  const rows: Row[] = [
+    { sym: 'XAUUSD', value: g.price, delta: xauDelta, deltaAbs: xauDeltaAbs, unit: '', live: xauLive, unavailable: !xauLive && g.status === 'error' },
   ];
+
+  for (const t of TAPE_ORDER) {
+    const q = instruments?.[t.key];
+    rows.push({
+      sym: t.sym,
+      value: q?.value ?? null,
+      delta: q?.changePct ?? null,
+      deltaAbs: q?.changeAbs ?? null,
+      unit: q?.unit ?? '',
+      live: !!q?.available,
+      unavailable: q ? !q.available : false,
+    });
+  }
 
   return (
     <div className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#03050899] backdrop-blur-xl">
       <div className="flex items-stretch overflow-x-auto scrollbar-thin">
-        {instruments.map((it) => {
+        {rows.map((it) => {
           const dir = it.delta === null ? 0 : it.delta > 0 ? 1 : it.delta < 0 ? -1 : 0;
           const col = dir > 0 ? '#4ADE80' : dir < 0 ? '#FF4D6D' : '#8A93A6';
           const shown = fmtVal(it.value, it.unit);
