@@ -7,16 +7,17 @@ import { Chart } from '../components/Chart';
 import { DriverMatrix } from '../components/DriverMatrix';
 import { AiOverview } from '../components/Intelligence';
 import { DashboardMood } from '../components/DashboardMood';
+import { LiveGoldWidget } from '../components/LiveGoldWidget';
+import { useAuthContext } from '../lib/AuthContext';
+import { resolveDisplayName, timeGreeting } from '../lib/userName';
 import type { GoldState } from '../hooks/useGoldFeed';
-import type { Quote } from '../services/priceService';
+import type { Quote, InstrumentMap } from '../services/priceService';
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good Morning' : h < 18 ? 'Good Afternoon' : 'Good Evening';
-}
 function Rule() { return <div className="rule my-12" />; }
 
-export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | null; us10y?: Quote | null }) {
+export function DashboardPage({ g, dxy, us10y, instruments }: { g: GoldState; dxy?: Quote | null; us10y?: Quote | null; instruments?: InstrumentMap | null }) {
+  const { user } = useAuthContext();
+  const name = resolveDisplayName(user);
   const live = g.status === 'connected' && g.price !== null;
   return (
     <div className="pb-6">
@@ -26,10 +27,10 @@ export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | n
           <GoldBar size={56} />
           <div>
             <h1 className="font-sora font-800 green-text leading-none" style={{ fontSize: 'clamp(30px,4vw,46px)' }}>
-              {greeting()}, Trader
+              {timeGreeting()}, {name}
             </h1>
             <p className="text-txt2 mt-2.5 flex items-center gap-2 text-[14px]">
-              <span className="text-greenBright">✦</span> Gold intelligence assistant that never sleeps
+              <span className="text-greenBright">✦</span> Welcome back to AURUM.
             </p>
           </div>
         </div>
@@ -47,6 +48,9 @@ export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | n
         </div>
       </div>
 
+      {/* live XAU/USD price engine */}
+      <div className="mb-5"><LiveGoldWidget /></div>
+
       {/* market bias + next high-impact event */}
       <div className="mb-5"><DashboardMood /></div>
 
@@ -55,7 +59,7 @@ export function DashboardPage({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | n
 
       {/* dense two-column desk */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <MacroDeskGrid g={g} />
+        <MacroDeskGrid g={g} instruments={instruments} />
         <ForYouPanel />
       </div>
 
