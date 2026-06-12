@@ -33,6 +33,27 @@ export function fmtAmsTime(iso: string): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: AMS_TZ });
 }
 
+// Amsterdam wall-clock hour-of-day (0–24 float) for a given instant. DST-aware.
+export function amsHoursOfDay(d: Date): number {
+  const p = new Intl.DateTimeFormat('en-GB', {
+    timeZone: AMS_TZ, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(d);
+  const get = (t: string) => +(p.find((x) => x.type === t)?.value ?? '0');
+  return (get('hour') % 24) + get('minute') / 60 + get('second') / 3600;
+}
+
+// Hours Amsterdam is ahead of UTC at the given instant (+1 CET, +2 CEST).
+export function amsUtcOffsetHours(d: Date): number {
+  const ams = new Date(d.toLocaleString('en-US', { timeZone: AMS_TZ }));
+  const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return Math.round((ams.getTime() - utc.getTime()) / 3600000);
+}
+
+// Amsterdam calendar day (YYYY-MM-DD) for a given instant.
+export function amsDateKey(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: AMS_TZ });
+}
+
 // Returns the correct short zone label for a given date: 'CET' or 'CEST'.
 export function amsZoneLabel(iso?: string): string {
   const d = iso ? new Date(iso) : new Date();

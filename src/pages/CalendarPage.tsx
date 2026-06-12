@@ -3,7 +3,7 @@ import { PageHeader } from './PageShell';
 import { Surface, Eyebrow } from '../components/ui';
 import { SESSIONS, sessionStatus, type SessionDef, type SessionStatus } from '../data/sessions';
 import { useEconomicCalendar, type CalEvent, type Impact } from '../hooks/useEconomicCalendar';
-import { fmtAmsTime, amsZoneLabel } from '../lib/time';
+import { fmtAmsTime, amsZoneLabel, amsHoursOfDay, amsUtcOffsetHours, amsDateKey } from '../lib/time';
 
 // ── Palette (consistent with SessionRail + EconomicCalendar) ───────────────
 const SESSION_COLOR: Record<string, string> = {
@@ -19,11 +19,11 @@ const IMPACT_COLOR: Record<Impact, string> = {
   High: '#FF4D6D', Medium: '#FFC857', Low: '#FFE66D', None: '#8A93A6',
 };
 
-// A session can wrap past midnight (e.g. Sydney 21→6). Split into bar segments
-// expressed as [startHour, endHour] in 0–24 UTC space.
-function sessionSegments(s: SessionDef): [number, number][] {
-  if (s.openUtc < s.closeUtc) return [[s.openUtc, s.closeUtc]];
-  return [[s.openUtc, 24], [0, s.closeUtc]];
+// A session can wrap past midnight (e.g. Sydney). Split into bar segments
+// expressed as [startHour, endHour] in 0–24 space (already Amsterdam-local).
+function sessionSegments(open: number, close: number): [number, number][] {
+  if (open < close) return [[open, close]];
+  return [[open, 24], [0, close]];
 }
 
 const pct = (hours: number) => (hours / 24) * 100;
@@ -38,11 +38,12 @@ function useNow(intervalMs = 1000) {
   return now;
 }
 
-function nowUtcHours(d: Date) { return d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600; }
-
 function pad(n: number) { return n.toString().padStart(2, '0'); }
+const mod24 = (h: number) => ((h % 24) + 24) % 24;
 function utcClock(d: Date) { return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`; }
-function localClock(d: Date) { return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+function amsClock(d: Date) {
+  return d.toLocaleTimeString('en-GB', { timeZone: 'Europe/Amsterdam', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 const HOUR_TICKS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
 
@@ -51,27 +52,30 @@ export function CalendarPage() {
   const cal = useEconomicCalendar();
   const [hovered, setHovered] = useState<string | null>(null);
 
-  const nowH = nowUtcHours(now);
+  // Live "now" position on the bar, in Amsterdam wall-clock hours.
+  const nowH = amsHoursOfDay(now);
 
-  // Sessions with their live status (reuses the dashboard's source of truth).
-  const sessions = useMemo(
-    () => SESSIONS.map((s) => ({ def: s, status: sessionStatus(s, now) })),
-    [now],
-  );
+  // Sessions are defined in UTC hours-of-day; shift them into Amsterdam local
+  // hours using the current DST-correct offset (CET +1 / CEST +2).
+  const sessions = useMemo(() => {
+    const off = amsUtcOffsetHours(now);
+    return SESSIONS.map((s) => ({
+      def: s,
+      status: sessionStatus(s, now),
+      openAms: mod24(s.openUtc + off),
+      closeAms: mod24(s.closeUtc + off),
+    }));
+  }, [now]);
 
-  // Events occurring *today* (UTC) — only these map onto the 24h bar. We never
-  // fabricate; if the feed is down or empty for today we say so explicitly.
+  // Events occurring on *today's Amsterdam calendar day* — only these map onto
+  // the 24h bar. We never fabricate; if the feed is down or empty we say so.
   const todayEvents = useMemo(() => {
     if (cal.status !== 'ok') return [];
-    const todayKey = now.toISOString().slice(0, 10);
+    const todayKey = amsDateKey(now);
     return cal.events
-      .filter((e) => e.date && e.date.slice(0, 10) === todayKey)
+      .filter((e) => e.date && amsDateKey(new Date(e.date)) === todayKey)
       .filter((e) => e.impact === 'High' || e.impact === 'Medium')
-      .map((e) => {
-        const d = new Date(e.date);
-        const h = d.getUTCHours() + d.getUTCMinutes() / 60;
-        return { ev: e, hours: h };
-      })
+      .map((e) => ({ ev: e, hours: amsHoursOfDay(new Date(e.date)) }))
       .sort((a, b) => a.hours - b.hours);
   }, [cal, now]);
 
@@ -79,23 +83,23 @@ export function CalendarPage() {
     <div className="pb-10">
       <PageHeader
         title="Calendar"
-        description="Market sessions and gold-relevant events on one UTC-anchored timeline, with the live clock and local time."
+        description="Market sessions and gold-relevant events on one timeline anchored to Amsterdam time, with the live clock and a UTC reference."
       />
 
-      {/* Live clocks */}
+      {/* Live clocks — Amsterdam is the primary reference, UTC secondary. */}
       <div className="flex items-center gap-3 mb-8 flex-wrap">
         <span className="card px-3.5 py-1.5 text-[12px] tnum font-700 text-greenSoft tracking-wide">
-          {utcClock(now)} <span className="text-muted/70 font-400">UTC</span>
+          {amsClock(now)} <span className="text-muted/70 font-400">AMSTERDAM · {amsZoneLabel()}</span>
         </span>
-        <span className="card px-3.5 py-1.5 text-[12px] tnum font-700 text-txt tracking-wide">
-          {localClock(now)} <span className="text-muted/70 font-400">LOCAL · {amsZoneLabel()}</span>
+        <span className="card px-3.5 py-1.5 text-[12px] tnum font-700 text-txt2 tracking-wide">
+          {utcClock(now)} <span className="text-muted/70 font-400">UTC</span>
         </span>
       </div>
 
       {/* ── SESSION TIMELINE ─────────────────────────────────────────────── */}
       <Surface className="p-6 mb-8">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <Eyebrow>Session Timeline · 24h UTC</Eyebrow>
+          <Eyebrow>Session Timeline · 24H · Europe/Amsterdam</Eyebrow>
           <div className="flex items-center gap-4 flex-wrap">
             {sessions.map(({ def }) => (
               <span key={def.name} className="flex items-center gap-1.5 text-[11px]">
@@ -114,9 +118,9 @@ export function CalendarPage() {
           setHovered={setHovered}
         />
 
-        {/* Per-session status row */}
+        {/* Per-session status row — open/close shown in Amsterdam time. */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-7">
-          {sessions.map(({ def, status }) => {
+          {sessions.map(({ def, status, openAms, closeAms }) => {
             const c = STATUS_COLOR[status];
             return (
               <div key={def.name} className="card px-3.5 py-3">
@@ -126,7 +130,7 @@ export function CalendarPage() {
                 </div>
                 <div className="text-[10px] font-700 tracking-wide mt-1.5" style={{ color: c }}>{STATUS_LABEL[status]}</div>
                 <div className="text-[11px] text-muted mt-1 tnum">
-                  {pad(def.openUtc)}:00 – {pad(def.closeUtc)}:00 UTC
+                  {pad(openAms)}:00 – {pad(closeAms)}:00 <span className="text-muted/60">{amsZoneLabel()}</span>
                 </div>
               </div>
             );
@@ -172,7 +176,7 @@ export function CalendarPage() {
 function SessionBar({
   sessions, events, nowH, hovered, setHovered,
 }: {
-  sessions: { def: SessionDef; status: SessionStatus }[];
+  sessions: { def: SessionDef; status: SessionStatus; openAms: number; closeAms: number }[];
   events: { ev: CalEvent; hours: number }[];
   nowH: number;
   hovered: string | null;
@@ -187,8 +191,8 @@ function SessionBar({
           <div key={h} className="absolute top-0 bottom-0 w-px bg-white/[0.05]" style={{ left: `${pct(h)}%` }} />
         ))}
         {/* session blocks */}
-        {sessions.map(({ def }) =>
-          sessionSegments(def).map(([a, b], i) => (
+        {sessions.map(({ def, openAms, closeAms }) =>
+          sessionSegments(openAms, closeAms).map(([a, b], i) => (
             <div
               key={`${def.name}-${i}`}
               className="absolute top-2 bottom-2 rounded-md flex items-center justify-center"
@@ -266,7 +270,7 @@ function EventTooltip({ ev, pos }: { ev: CalEvent; pos: number }) {
       </div>
       <div className="font-sora font-700 text-[13px] text-txt leading-snug">{ev.event}</div>
       <div className="text-[11px] text-muted mt-1.5 tnum">
-        {utc} · {fmtAmsTime(ev.date)} {amsZoneLabel(ev.date)}
+        {fmtAmsTime(ev.date)} {amsZoneLabel(ev.date)} · <span className="text-muted/70">{utc}</span>
       </div>
     </div>
   );
@@ -284,8 +288,8 @@ function EventRow({ ev, active, onHover, onLeave }: {
       onMouseLeave={onLeave}
       className={`flex items-center gap-4 px-4 py-2.5 rounded-lg transition-colors cursor-default ${active ? 'bg-white/[0.05]' : 'hover:bg-white/[0.02]'}`}
     >
-      <span className="tnum text-[12px] text-txt2 w-[112px] shrink-0">
-        {utc} <span className="text-muted/60">UTC</span> · {fmtAmsTime(ev.date)} <span className="text-muted/60">{amsZoneLabel(ev.date)}</span>
+      <span className="tnum text-[12px] text-txt2 w-[132px] shrink-0">
+        {fmtAmsTime(ev.date)} <span className="text-muted/60">{amsZoneLabel(ev.date)}</span> · {utc} <span className="text-muted/60">UTC</span>
       </span>
       <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c, boxShadow: `0 0 6px ${c}` }} />
       <span className="font-sora font-600 text-[13px] text-txt flex-1 truncate">{ev.event}</span>
