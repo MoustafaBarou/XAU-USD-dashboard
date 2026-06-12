@@ -1,7 +1,13 @@
 import { motion } from 'framer-motion';
-import { MACRO_CARDS, type Bias } from '../data/intel';
-import type { GoldState } from '../hooks/useGoldFeed';
+import { useMemo } from 'react';
 import { Eyebrow } from './ui';
+import type { GoldState } from '../hooks/useGoldFeed';
+import type { InstrumentMap } from '../services/priceService';
+import { useEconomicCalendar } from '../hooks/useEconomicCalendar';
+import {
+  riskSentimentDriver, goldMomentumDriver, inflationDriver, noFeedDrivers,
+  compositeBias, type Bias, type DriverRead,
+} from '../lib/macroBias';
 
 function biasColor(b: Bias) {
   if (b === 'Strong Bullish' || b === 'Bullish') return '#4ADE80';
@@ -9,53 +15,59 @@ function biasColor(b: Bias) {
   return '#FFC857';
 }
 
-/** One HybridTrader-style card. */
-function Card({
-  symbol, changePct, live, bias, confidence, analysis, status,
-}: {
-  symbol: string; changePct: number | null; live: boolean;
-  bias: Bias; confidence: number; analysis: string; status?: string;
-}) {
-  const bc = biasColor(bias);
-  const chgColor = changePct === null ? '#8A93A6' : changePct >= 0 ? '#4ADE80' : '#FF4D6D';
+function Card({ d }: { d: DriverRead }) {
+  const bc = biasColor(d.bias);
   return (
     <div className="card card-hover p-4 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="font-sora font-800 text-[16px] text-txt tracking-wide">{symbol}</span>
-          {live && <span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 6px #4ADE80' }} />}
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-sora font-800 text-[15px] text-txt tracking-wide truncate">{d.title}</span>
+          {d.available && <span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse shrink-0" style={{ boxShadow: '0 0 6px #4ADE80' }} />}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] tnum font-600" style={{ color: chgColor }}>
-            {changePct === null ? 'no feed' : `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%`}
-          </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {!d.available && <span className="text-[11px] text-muted/60">no feed</span>}
           <span className="text-[10px] font-700 px-2 py-[2px] rounded-full uppercase tracking-wide"
-            style={{ color: bc, background: `${bc}1a`, border: `1px solid ${bc}40` }}>{bias}</span>
+            style={{ color: bc, background: `${bc}1a`, border: `1px solid ${bc}40` }}>{d.bias}</span>
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] text-muted">{status ?? 'Confidence'}</span>
-        <span className="text-[11px] tnum text-txt2">{confidence}%</span>
+        <span className="text-[11px] text-muted">{d.available ? d.headline : 'Strength'}</span>
+        <span className="text-[11px] tnum text-txt2">{d.available ? `${d.strength}%` : '--'}</span>
       </div>
       <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-3">
-        <div className="h-full rounded-full" style={{ width: `${confidence}%`, background: 'linear-gradient(90deg,#15803D,#4ADE80)' }} />
+        <div className="h-full rounded-full" style={{ width: `${d.available ? d.strength : 0}%`, background: 'linear-gradient(90deg,#15803D,#4ADE80)' }} />
       </div>
 
       <div className="rounded-lg p-3" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.12)' }}>
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-greenBright text-[11px]">✦</span>
-          <span className="text-[10px] uppercase tracking-[0.14em] text-greenSoft font-700">AI Analysis</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-greenBright text-[11px]">✦</span>
+            <span className="text-[10px] uppercase tracking-[0.14em] text-greenSoft font-700">Mechanical Read</span>
+          </div>
+          <span className="text-[9px] uppercase tracking-[0.1em] text-muted/60">{d.source}</span>
         </div>
-        <p className="text-[12px] leading-relaxed text-txt2/85">{analysis}</p>
+        <p className="text-[12px] leading-relaxed text-txt2/85">{d.detail}</p>
       </div>
     </div>
   );
 }
 
-export function MacroDeskGrid({ g }: { g: GoldState }) {
-  const xauChange = g.price !== null && g.dayOpen ? ((g.price - g.dayOpen) / g.dayOpen) * 100 : null;
-  const xauBias: Bias = xauChange === null ? 'Neutral' : xauChange > 0.05 ? 'Bullish' : xauChange < -0.05 ? 'Bearish' : 'Neutral';
+export function MacroDeskGrid({ g, instruments }: { g: GoldState; instruments?: InstrumentMap | null }) {
+  const cal = useEconomicCalendar();
+  const events = cal.status === 'ok' ? cal.events : null;
+
+  const { drivers, composite } = useMemo(() => {
+    const live: DriverRead[] = [
+      goldMomentumDriver(g.price, g.dayOpen, g.status === 'connected'),
+      riskSentimentDriver(instruments ?? null),
+      inflationDriver(events),
+    ];
+    const all = [...live, ...noFeedDrivers()];
+    return { drivers: all, composite: compositeBias(all) };
+  }, [g.price, g.dayOpen, g.status, instruments, events]);
+
+  const cb = biasColor(composite.bias);
 
   return (
     <div className="card p-5">
@@ -63,43 +75,30 @@ export function MacroDeskGrid({ g }: { g: GoldState }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-greenBright">↗</span>
-            <h3 className="font-sora font-700 text-[16px] text-txt">AI Macro Desk</h3>
+            <h3 className="font-sora font-700 text-[16px] text-txt">Macro Desk</h3>
           </div>
-          <div className="text-[11px] text-muted mt-0.5">Gold bias analysis</div>
+          <div className="text-[11px] text-muted mt-0.5">Mechanical gold-bias engine</div>
         </div>
         <Eyebrow>XAU/USD focus</Eyebrow>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* live XAU/USD card first */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <Card
-            symbol="XAUUSD"
-            changePct={xauChange}
-            live={g.status === 'connected' && g.price !== null}
-            bias={xauBias}
-            confidence={g.tickCount > 0 ? Math.min(95, 60 + g.tickCount) : 60}
-            status={g.price !== null ? `Spot ${g.price.toFixed(2)}` : 'Awaiting feed'}
-            analysis={
-              g.status === 'connected' && g.price !== null
-                ? `Live spot ${g.price.toFixed(2)}, ${xauChange! >= 0 ? 'up' : 'down'} ${Math.abs(xauChange!).toFixed(2)}% on the session. ${xauBias === 'Bullish' ? 'Buyers in control of the intraday tape.' : xauBias === 'Bearish' ? 'Sellers pressing the session lower.' : 'Two-way and balanced.'}`
-                : 'Live price feed offline — no price-derived read. No data is fabricated.'
-            }
-          />
-        </motion.div>
+      {/* composite bias summary - computed only from live drivers */}
+      <div className="card p-3 mb-4 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted">Composite Bias</span>
+          <span className="text-[10px] font-700 px-2.5 py-[3px] rounded-full uppercase tracking-wide"
+            style={{ color: cb, background: `${cb}1a`, border: `1px solid ${cb}40` }}>{composite.bias}</span>
+        </div>
+        <div className="flex items-center gap-4 text-[11px]">
+          <span className="text-muted">Confidence <span className="tnum text-txt2 font-700">{composite.confidence}%</span></span>
+          <span className="text-muted">Live drivers <span className="tnum text-txt2 font-700">{composite.contributors}</span></span>
+        </div>
+      </div>
 
-        {/* gold-driver cards (editorial) */}
-        {MACRO_CARDS.map((c, i) => (
-          <motion.div key={c.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (i + 1) * 0.05 }}>
-            <Card
-              symbol={c.title.replace(/\s*\(.*\)/, '').toUpperCase().slice(0, 14)}
-              changePct={null}
-              live={false}
-              bias={c.bias}
-              confidence={c.confidence}
-              status={c.status}
-              analysis={c.analysis}
-            />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {drivers.map((d, i) => (
+          <motion.div key={d.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+            <Card d={d} />
           </motion.div>
         ))}
       </div>
