@@ -40,15 +40,22 @@ export default function App() {
         <div className="aur a1" /><div className="aur a2" /><div className="aur a3" />
         <div className="vignette" /><div className="grain" />
       </div>
-      <div className="relative z-10">
+      {/* Safe-area insets keep the tape and content clear of the notch on phones. */}
+      <div
+        className="relative z-10"
+        style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+      >
         {/* In-app alert engine — fires toasts while the app is open. Renders nothing. */}
         <AlertWatcher g={g} />
         <TerminalBar g={g} instruments={macro.instruments} />
         {/* Mobile / narrow-viewport navigation (sidebar is hidden below lg) */}
         <MobileNav active={active} onSelect={setActive} />
-        <div className="flex">
+        {/* Sidebar + content are centred together as one block, so wide/ultrawide
+            screens don't strand the content in a narrow column with a black void
+            on the left. The generous cap lets the layout use the width. */}
+        <div className="flex max-w-[2400px] mx-auto w-full">
           <Sidebar active={active} onSelect={setActive} />
-          <main className="flex-1 min-w-0 px-6 sm:px-12 xl:px-20 py-4 max-w-[1600px] mx-auto w-full">
+          <main className="flex-1 min-w-0 px-5 sm:px-10 xl:px-14 py-4 w-full">
             {renderPage()}
             <footer className="text-[11px] text-muted/50 text-center py-16 leading-relaxed max-w-2xl mx-auto">
               AURUM · Gold Intelligence Terminal · Live XAU/USD via gold-api.com · architecture ready for VT Markets MT5 bridge.<br />

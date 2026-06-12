@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from './PageShell';
-import { Surface, Eyebrow } from '../components/ui';
+import { Surface, Eyebrow, Toggle } from '../components/ui';
 import { usePreferences } from '../lib/PreferencesContext';
 import { useAuthContext } from '../lib/AuthContext';
 import { TWELVEDATA_AVAILABLE, type ProviderId } from '../feed';
@@ -26,7 +26,9 @@ export function SettingsPage() {
         </div>
       )}
 
-      <div className="space-y-8 max-w-3xl">
+      {/* One column on phones/tablets; two columns from xl up so wide screens
+          don't leave a thin strip of settings in a sea of black. */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         {/* ── 1. DISPLAY PREFERENCES ─────────────────────────────────── */}
         <Section eyebrow="Display Preferences" title="How prices and motion render across AURUM">
           <Row label="Decimal precision" hint="Applied to every XAU/USD price in the app (tape, widget, header).">
@@ -142,22 +144,6 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
       </div>
       <div className="shrink-0">{children}</div>
     </div>
-  );
-}
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      role="switch" aria-checked={on}
-      onClick={() => onChange(!on)}
-      className="relative h-6 w-11 rounded-full transition-colors"
-      style={{ background: on ? '#22C55E' : 'rgba(255,255,255,0.12)' }}
-    >
-      <span
-        className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform"
-        style={{ transform: on ? 'translateX(22px)' : 'translateX(2px)' }}
-      />
-    </button>
   );
 }
 

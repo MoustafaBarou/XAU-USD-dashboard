@@ -65,7 +65,10 @@ export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: In
   }
 
   return (
-    <div className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#03050899] backdrop-blur-xl">
+    <div
+      className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#03050899] backdrop-blur-xl"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       <div className="flex items-stretch overflow-x-auto scrollbar-thin">
         {rows.map((it) => {
           const dir = it.delta === null ? 0 : it.delta > 0 ? 1 : it.delta < 0 ? -1 : 0;

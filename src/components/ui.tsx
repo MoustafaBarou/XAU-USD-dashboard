@@ -31,6 +31,27 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <span className="eyebrow">{children}</span>;
 }
 
+/**
+ * Reusable on/off switch. The 18px thumb keeps a constant 3px inset on both
+ * sides of the 44×24 track in BOTH states (off: left 3px, on: right 3px) and
+ * glides between them with a smooth left + colour transition.
+ */
+export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
+  return (
+    <button
+      type="button" role="switch" aria-checked={on} aria-label={label}
+      onClick={() => onChange(!on)}
+      className="relative inline-flex h-6 w-11 rounded-full shrink-0 transition-colors duration-200 ease-out outline-none"
+      style={{ background: on ? '#22C55E' : 'rgba(255,255,255,0.14)' }}
+    >
+      <span
+        className="absolute h-[18px] w-[18px] rounded-full bg-white transition-[left] duration-200 ease-out"
+        style={{ top: '3px', left: on ? 'calc(100% - 21px)' : '3px', boxShadow: '0 1px 2px rgba(0,0,0,0.35)' }}
+      />
+    </button>
+  );
+}
+
 export function BiasPill({ bias }: { bias: Bias }) {
   const c = biasColor(bias);
   return (
