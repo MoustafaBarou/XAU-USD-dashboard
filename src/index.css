@@ -10,13 +10,20 @@ body {
   margin: 0;
   background: #04060A;
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-feature-settings: 'cv05', 'cv08', 'ss01';
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-.font-sora { font-family: 'Sora', sans-serif; }
-.tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+/* Display / heading type — Sora, tightened for a premium fintech feel. */
+.font-sora { font-family: 'Sora', system-ui, sans-serif; }
+h1, h2, h3, h4 { letter-spacing: -0.018em; }
+
+/* Tabular, slashed-zero figures for every price / metric so digits never jitter. */
+.tnum { font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: 'tnum', 'zero'; }
 
 /* ── Cinematic ambient field ─────────────────────────────────────────── */
 /* Layered, blurred aurora + a vignette that darkens the edges of the frame

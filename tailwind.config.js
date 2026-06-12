@@ -4,8 +4,15 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sora: ['Sora', 'sans-serif'],
-        inter: ['Inter', 'sans-serif'],
+        // Sora = display / headings & symbols, Inter = body / UI text.
+        display: ['Sora', 'system-ui', 'sans-serif'],
+        sora: ['Sora', 'system-ui', 'sans-serif'],
+        inter: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      letterSpacing: {
+        // institutional ticker / eyebrow tracking scale
+        ticker: '0.08em',
+        eyebrow: '0.22em',
       },
       colors: {
         bg: '#05070A',

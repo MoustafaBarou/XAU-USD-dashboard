@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GoldBar } from './Brand';
+import { AccountWidget } from './AccountWidget';
 import { NAV_ITEMS, type NavItem } from '../nav';
 
 /**
@@ -17,16 +18,20 @@ export function MobileNav({ active, onSelect }: { active: NavItem; onSelect: (s:
           <GoldBar size={30} />
           <div className="font-sora font-800 text-[16px] gold-text tracking-wide leading-none">AURUM</div>
         </div>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-label="Toggle navigation"
-          className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/[0.05] transition-colors"
-        >
-          <span className={`h-[2px] w-5 bg-gold transition-transform ${open ? 'translate-y-[7px] rotate-45' : ''}`} />
-          <span className={`h-[2px] w-5 bg-gold transition-opacity ${open ? 'opacity-0' : ''}`} />
-          <span className={`h-[2px] w-5 bg-gold transition-transform ${open ? '-translate-y-[7px] -rotate-45' : ''}`} />
-        </button>
+        {/* Account control stays visible at all times (menu open or closed). */}
+        <div className="flex items-center gap-3">
+          <AccountWidget variant="compact" />
+          <button
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label="Toggle navigation"
+            className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/[0.05] transition-colors"
+          >
+            <span className={`h-[2px] w-5 bg-gold transition-transform ${open ? 'translate-y-[7px] rotate-45' : ''}`} />
+            <span className={`h-[2px] w-5 bg-gold transition-opacity ${open ? 'opacity-0' : ''}`} />
+            <span className={`h-[2px] w-5 bg-gold transition-transform ${open ? '-translate-y-[7px] -rotate-45' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {open && (

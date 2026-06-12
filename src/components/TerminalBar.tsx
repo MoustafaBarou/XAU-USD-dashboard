@@ -1,5 +1,6 @@
 import type { GoldState } from '../hooks/useGoldFeed';
 import type { InstrumentMap, InstrumentKey } from '../services/priceService';
+import { SymbolBadge } from './SymbolBadge';
 
 /**
  * Persistent top terminal bar (Bloomberg-style tape).
@@ -14,22 +15,26 @@ interface Row {
   delta: number | null;       // change %
   deltaAbs: number | null;    // change $ (absolute)
   unit: string;
+  digits: number;
   live: boolean;
   unavailable: boolean;
 }
 
-function fmtVal(v: number | null, unit: string) {
+function fmtVal(v: number | null, unit: string, digits: number) {
   if (v === null) return null;
-  return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (unit === '%' ? '%' : '');
+  return v.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }) + (unit === '%' ? '%' : '');
 }
 
+// Focus instruments lead the tape; the broader macro set follows.
 const TAPE_ORDER: { key: InstrumentKey; sym: string }[] = [
   { key: 'DXY', sym: 'DXY' },
+  { key: 'VIX', sym: 'VIX' },
+  { key: 'EURUSD', sym: 'EURUSD' },
+  { key: 'GBPUSD', sym: 'GBPUSD' },
   { key: 'US10Y', sym: 'US10Y' },
   { key: 'US02Y', sym: 'US02Y' },
   { key: 'SPX', sym: 'SPX' },
   { key: 'NASDAQ', sym: 'NASDAQ' },
-  { key: 'VIX', sym: 'VIX' },
 ];
 
 export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: InstrumentMap | null }) {
@@ -38,7 +43,7 @@ export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: In
   const xauLive = g.status === 'connected' && g.price !== null;
 
   const rows: Row[] = [
-    { sym: 'XAUUSD', value: g.price, delta: xauDelta, deltaAbs: xauDeltaAbs, unit: '', live: xauLive, unavailable: !xauLive && g.status === 'error' },
+    { sym: 'XAUUSD', value: g.price, delta: xauDelta, deltaAbs: xauDeltaAbs, unit: '', digits: 2, live: xauLive, unavailable: !xauLive && g.status === 'error' },
   ];
 
   for (const t of TAPE_ORDER) {
@@ -49,6 +54,7 @@ export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: In
       delta: q?.changePct ?? null,
       deltaAbs: q?.changeAbs ?? null,
       unit: q?.unit ?? '',
+      digits: q?.digits ?? 2,
       live: !!q?.available,
       unavailable: q ? !q.available : false,
     });
@@ -60,14 +66,11 @@ export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: In
         {rows.map((it) => {
           const dir = it.delta === null ? 0 : it.delta > 0 ? 1 : it.delta < 0 ? -1 : 0;
           const col = dir > 0 ? '#4ADE80' : dir < 0 ? '#FF4D6D' : '#8A93A6';
-          const shown = fmtVal(it.value, it.unit);
+          const shown = fmtVal(it.value, it.unit, it.digits);
+          const status = it.live ? 'live' : it.unavailable ? 'unavailable' : 'idle';
           return (
             <div key={it.sym} className="flex items-center gap-2.5 px-5 py-2.5 border-r border-white/[0.05] whitespace-nowrap shrink-0">
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: it.live ? '#4ADE80' : it.unavailable ? '#FF4D6D' : '#3A4250', boxShadow: it.live ? '0 0 7px #4ADE80' : 'none' }} />
-                <span className="font-sora font-700 text-[11px] tracking-[0.08em] text-txt2">{it.sym}</span>
-              </span>
+              <SymbolBadge symbol={it.sym} status={status} />
               {it.live && shown ? (
                 <>
                   <span className="font-sora font-700 text-[12px] tnum text-white">{shown}</span>

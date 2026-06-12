@@ -22,17 +22,21 @@ export interface Quote {
   open: number | null;
   asOf: number | null;        // ms epoch of the quote timestamp
   unit: string;               // '', '%'
+  digits: number;             // display decimal places (forex = 4, indices = 2)
   available: boolean;
   error?: string;
 }
 
-export type InstrumentKey = 'DXY' | 'US10Y' | 'US02Y' | 'SPX' | 'NASDAQ' | 'VIX';
+export type InstrumentKey =
+  | 'DXY' | 'US10Y' | 'US02Y' | 'SPX' | 'NASDAQ' | 'VIX' | 'EURUSD' | 'GBPUSD';
 
 interface InstrumentDef {
   key: InstrumentKey;
   fmpSymbol: string;
   label: string;
   unit: string;
+  /** display decimal places — forex pairs need 4, indices/levels 2. */
+  digits?: number;
   /** treat raw price as a yield that may arrive scaled x10 (e.g. ^TNX = 42.2 -> 4.22). */
   yieldScaled?: boolean;
 }
@@ -44,13 +48,19 @@ const V3 = 'https://financialmodelingprep.com/api/v3';
 export const HAS_FMP_KEY = !!FMP_KEY;
 export const PRICE_POLL_MS = 60_000;
 
+// EURUSD / GBPUSD are FMP forex quotes — covered by the free tier and live via
+// VITE_FMP_API_KEY. DXY (^DXY) and VIX (^VIX) are index quotes that FMP's free
+// tier does NOT expose; they resolve to available:false and the UI shows "no
+// feed" / "data unavailable". We never fabricate a value for them.
 const INSTRUMENTS: InstrumentDef[] = [
-  { key: 'DXY',    fmpSymbol: '^DXY',  label: 'Dollar Index (DXY)', unit: '' },
-  { key: 'US10Y',  fmpSymbol: '^TNX',  label: 'US 10Y Yield',       unit: '%', yieldScaled: true },
-  { key: 'US02Y',  fmpSymbol: '^FVX',  label: 'US 5Y Yield',        unit: '%', yieldScaled: true },
-  { key: 'SPX',    fmpSymbol: '^GSPC', label: 'S&P 500',            unit: '' },
-  { key: 'NASDAQ', fmpSymbol: '^IXIC', label: 'Nasdaq Composite',   unit: '' },
-  { key: 'VIX',    fmpSymbol: '^VIX',  label: 'CBOE Volatility',    unit: '' },
+  { key: 'DXY',    fmpSymbol: '^DXY',   label: 'Dollar Index (DXY)', unit: '' },
+  { key: 'VIX',    fmpSymbol: '^VIX',   label: 'CBOE Volatility',    unit: '' },
+  { key: 'EURUSD', fmpSymbol: 'EURUSD', label: 'Euro / Dollar',      unit: '', digits: 4 },
+  { key: 'GBPUSD', fmpSymbol: 'GBPUSD', label: 'Sterling / Dollar',  unit: '', digits: 4 },
+  { key: 'US10Y',  fmpSymbol: '^TNX',   label: 'US 10Y Yield',       unit: '%', yieldScaled: true },
+  { key: 'US02Y',  fmpSymbol: '^FVX',   label: 'US 5Y Yield',        unit: '%', yieldScaled: true },
+  { key: 'SPX',    fmpSymbol: '^GSPC',  label: 'S&P 500',            unit: '' },
+  { key: 'NASDAQ', fmpSymbol: '^IXIC',  label: 'Nasdaq Composite',   unit: '' },
 ];
 // NOTE on US02Y: FMP's free index set does not reliably expose a 2Y yield symbol.
 // ^FVX (5Y) and ^TNX (10Y) are the dependable CBOE yield indices. We keep US02Y
@@ -59,10 +69,11 @@ const INSTRUMENTS: InstrumentDef[] = [
 // if your plan exposes one.)
 const US02Y_SYMBOL = (import.meta.env.VITE_FMP_US02Y_SYMBOL as string | undefined) ?? '';
 
-function unavailable(def: { fmpSymbol: string; label: string; unit: string }, error: string): Quote {
+function unavailable(def: { fmpSymbol: string; label: string; unit: string; digits?: number }, error: string): Quote {
   return {
     symbol: def.fmpSymbol, label: def.label, value: null, changePct: null, changeAbs: null,
-    dayHigh: null, dayLow: null, open: null, asOf: null, unit: def.unit, available: false, error,
+    dayHigh: null, dayLow: null, open: null, asOf: null, unit: def.unit,
+    digits: def.digits ?? 2, available: false, error,
   };
 }
 
@@ -103,6 +114,7 @@ async function fmpQuoteRaw(symbol: string): Promise<FmpRaw | null> {
 }
 
 function toQuote(def: InstrumentDef, raw: FmpRaw): Quote {
+  const digits = def.digits ?? 2;
   let value = raw.price as number;
   if (def.yieldScaled && value > 25) value = value / 10;
   const changeAbs = typeof raw.change === 'number'
@@ -111,14 +123,15 @@ function toQuote(def: InstrumentDef, raw: FmpRaw): Quote {
   return {
     symbol: def.fmpSymbol,
     label: def.label,
-    value: +value.toFixed(2),
+    value: +value.toFixed(digits),
     changePct: typeof raw.changesPercentage === 'number' ? +raw.changesPercentage.toFixed(2) : null,
-    changeAbs: changeAbs === null ? null : +changeAbs.toFixed(2),
+    changeAbs: changeAbs === null ? null : +changeAbs.toFixed(digits),
     dayHigh: typeof raw.dayHigh === 'number' ? raw.dayHigh : null,
     dayLow: typeof raw.dayLow === 'number' ? raw.dayLow : null,
     open: typeof raw.open === 'number' ? raw.open : null,
     asOf: typeof raw.timestamp === 'number' ? raw.timestamp * 1000 : Date.now(),
     unit: def.unit,
+    digits,
     available: true,
   };
 }
@@ -149,11 +162,14 @@ export async function fetchAllInstruments(): Promise<InstrumentMap> {
 
 // -- Backward-compatible helpers (existing callers keep working) -----------
 
+function defByKey(key: InstrumentKey): InstrumentDef {
+  return INSTRUMENTS.find((d) => d.key === key) ?? INSTRUMENTS[0];
+}
 export async function fetchDxy(): Promise<Quote> {
-  return fetchOne(INSTRUMENTS[0]);
+  return fetchOne(defByKey('DXY'));
 }
 export async function fetchUs10y(): Promise<Quote> {
-  return fetchOne(INSTRUMENTS[1]);
+  return fetchOne(defByKey('US10Y'));
 }
 export async function fetchMacroQuotes(): Promise<{ dxy: Quote; us10y: Quote }> {
   const [dxy, us10y] = await Promise.all([fetchDxy(), fetchUs10y()]);

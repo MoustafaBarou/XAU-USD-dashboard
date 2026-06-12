@@ -1,10 +1,26 @@
 import type { User } from '@supabase/supabase-js';
 
 /**
+ * Turns a slug-like handle into a human name: "moustafa_barou" -> "Moustafa
+ * Barou", "john.doe" -> "John Doe". Separators (_ . -) become spaces and each
+ * word is title-cased. Strings that are already spaced names pass through with
+ * proper casing applied.
+ */
+export function humanizeName(raw: string): string {
+  const cleaned = raw.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/**
  * Resolves the best human display name for the signed-in user, following the
- * priority: display_name -> first_name + last_name -> username -> email local
+ * priority: first_name + last_name -> display_name -> username -> email local
  * part. Reads from Supabase auth user_metadata (set at sign-up / profile edit).
- * Returns 'Trader' only when no user is present.
+ * Slug-like values (e.g. the "moustafa_barou" username) are humanized into a
+ * proper-cased name. Returns 'Trader' only when no user is present.
  */
 export function resolveDisplayName(user: User | null | undefined): string {
   if (!user) return 'Trader';
@@ -12,17 +28,17 @@ export function resolveDisplayName(user: User | null | undefined): string {
 
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '');
 
-  const displayName = str(m.display_name) || str(m.full_name) || str(m.name);
-  if (displayName) return displayName;
-
   const first = str(m.first_name);
   const last = str(m.last_name);
-  if (first || last) return [first, last].filter(Boolean).join(' ');
+  if (first || last) return humanizeName([first, last].filter(Boolean).join(' '));
+
+  const displayName = str(m.display_name) || str(m.full_name) || str(m.name);
+  if (displayName) return humanizeName(displayName);
 
   const username = str(m.username);
-  if (username) return username;
+  if (username) return humanizeName(username);
 
-  if (user.email) return user.email.split('@')[0];
+  if (user.email) return humanizeName(user.email.split('@')[0]);
 
   return 'Trader';
 }

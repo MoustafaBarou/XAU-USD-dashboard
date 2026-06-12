@@ -21,7 +21,7 @@ export default function App() {
   // Render switch — each sidebar selection shows a distinct page.
   function renderPage() {
     switch (active) {
-      case 'Dashboard':         return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} />;
+      case 'Dashboard':         return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} instruments={macro.instruments} />;
       case 'Reports':           return <ReportsPage />;
       case 'Calendar':          return <CalendarPage />;
       case 'Macro Desk':        return <MacroDeskPage />;
@@ -30,7 +30,7 @@ export default function App() {
       case 'Market Mood':       return <MarketMoodPage />;
       case 'Journal':           return <JournalPage />;
       case 'Settings':          return <SettingsPage />;
-      default:                  return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} />;
+      default:                  return <DashboardPage g={g} dxy={macro.dxy} us10y={macro.us10y} instruments={macro.instruments} />;
     }
   }
   return (
