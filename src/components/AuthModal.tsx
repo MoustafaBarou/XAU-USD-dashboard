@@ -34,11 +34,15 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      <motion.div className="fixed inset-0 z-50 overflow-y-auto"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+        {/* Fully opaque overlay — solid AURUM-dark so nothing behind it shows through. */}
+        <div className="fixed inset-0 bg-[#04060A] backdrop-blur-md" onClick={onClose} />
+        {/* Centering wrapper that can scroll on short viewports without clipping the card. */}
+        <div className="relative z-10 flex min-h-full items-center justify-center p-4">
         <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }}
-          className="relative z-10 w-full max-w-[400px] surface surface-lit p-7">
+          style={{ backgroundColor: '#0B1016' }}
+          className="relative w-full max-w-[400px] my-auto surface surface-lit p-7">
           <div className="flex items-center gap-3 mb-6">
             <GoldBar size={40} />
             <div>
@@ -79,6 +83,7 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
 
           <button onClick={onClose} className="absolute top-4 right-4 text-muted hover:text-txt text-[18px] leading-none">×</button>
         </motion.div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
