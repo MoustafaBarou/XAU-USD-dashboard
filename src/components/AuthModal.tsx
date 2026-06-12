@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoldBar } from './Brand';
 import { useAuthContext } from '../lib/AuthContext';
@@ -32,14 +33,26 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     }
   }
 
-  return (
+  // Rendered via a portal to <body> so it escapes every ancestor stacking
+  // context (the mobile header uses backdrop-blur, which traps z-index) and
+  // truly sits above the sticky top-tape (z-40) and everything else.
+  return createPortal(
     <AnimatePresence>
-      <motion.div className="fixed inset-0 z-50 overflow-y-auto"
+      <motion.div className="fixed inset-0 z-[100] overflow-y-auto"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         {/* Fully opaque overlay — solid AURUM-dark so nothing behind it shows through. */}
         <div className="fixed inset-0 bg-[#04060A] backdrop-blur-md" onClick={onClose} />
-        {/* Centering wrapper that can scroll on short viewports without clipping the card. */}
-        <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+        {/* Centering wrapper that scrolls on short viewports without clipping the
+            card; safe-area insets keep the header/email field clear of the notch. */}
+        <div
+          className="relative z-10 flex min-h-full items-center justify-center"
+          style={{
+            paddingTop: 'max(1.25rem, env(safe-area-inset-top))',
+            paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right))',
+          }}
+        >
         <motion.div initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }}
           style={{ backgroundColor: '#0B1016' }}
           className="relative w-full max-w-[400px] my-auto surface surface-lit p-7">
@@ -85,7 +98,8 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
         </motion.div>
         </div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
