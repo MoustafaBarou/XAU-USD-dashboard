@@ -6,9 +6,11 @@ import { usePreferences } from '../lib/PreferencesContext';
 /**
  * Persistent top terminal bar (Bloomberg-style tape).
  * XAUUSD is live from the realtime gold feed. DXY, US10Y, US02Y, SPX, NASDAQ
- * and VIX are live from FMP when the request succeeds. When a feed is configured
- * but returns no data / is premium-gated, that instrument shows "DATA UNAVAILABLE".
- * When no key is configured at all it shows "no feed". Nothing is fabricated.
+ * and VIX are live from FMP when the request succeeds. The tape only renders
+ * instruments that currently have live data — anything without a working feed
+ * (premium-gated, no data, or no key configured) is filtered out of the view.
+ * Instruments stay in the config (TAPE_ORDER) and reappear automatically the
+ * moment a real feed delivers data, preserving tape order. Nothing is fabricated.
  */
 interface Row {
   sym: string;
@@ -64,31 +66,27 @@ export function TerminalBar({ g, instruments }: { g: GoldState; instruments?: In
     });
   }
 
+  // Data-driven tape: only instruments with a working live feed are shown.
+  // Filtering preserves TAPE_ORDER, so anything that gains a feed later
+  // reappears in its configured position with no code change.
+  const visible = rows.filter((it) => it.live && fmtVal(it.value, it.unit, it.digits) !== null);
+
   return (
     <div
       className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#03050899] backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex items-stretch overflow-x-auto scrollbar-thin">
-        {rows.map((it) => {
+        {visible.map((it) => {
           const dir = it.delta === null ? 0 : it.delta > 0 ? 1 : it.delta < 0 ? -1 : 0;
           const col = dir > 0 ? '#4ADE80' : dir < 0 ? '#FF4D6D' : '#8A93A6';
           const shown = fmtVal(it.value, it.unit, it.digits);
-          const status = it.live ? 'live' : it.unavailable ? 'unavailable' : 'idle';
           return (
             <div key={it.sym} className="flex items-center gap-2.5 px-5 py-2.5 border-r border-white/[0.05] whitespace-nowrap shrink-0">
-              <SymbolBadge symbol={it.sym} status={status} />
-              {it.live && shown ? (
-                <>
-                  <span className="font-sora font-700 text-[12px] tnum text-white">{shown}</span>
-                  {it.delta !== null && (
-                    <span className="text-[11px] tnum font-600" style={{ color: col }}>{it.delta >= 0 ? '+' : ''}{it.delta.toFixed(2)}%</span>
-                  )}
-                </>
-              ) : it.unavailable ? (
-                <span className="text-[9px] uppercase tracking-[0.12em] text-bear/80 font-700">data unavailable</span>
-              ) : (
-                <span className="text-[9px] uppercase tracking-[0.14em] text-muted/50">no feed</span>
+              <SymbolBadge symbol={it.sym} status="live" />
+              <span className="font-sora font-700 text-[12px] tnum text-white">{shown}</span>
+              {it.delta !== null && (
+                <span className="text-[11px] tnum font-600" style={{ color: col }}>{it.delta >= 0 ? '+' : ''}{it.delta.toFixed(2)}%</span>
               )}
             </div>
           );
