@@ -1,0 +1,46 @@
+# Scheduled fetch of Myfxbook XAU/USD retail sentiment -> Supabase.
+#
+# Runs login+outlook back-to-back on ONE runner (= one egress IP for the whole
+# job), which is what the Vercel request-time function cannot guarantee. See
+# scripts/fetch-sentiment.mjs for the full rationale.
+#
+# Required GitHub Actions secrets (Settings -> Secrets and variables -> Actions):
+#   MYFXBOOK_EMAIL, MYFXBOOK_PASSWORD
+#   SUPABASE_URL                  (same value as VITE_SUPABASE_URL)
+#   SUPABASE_SERVICE_ROLE_KEY     (service-role key — exists ONLY here, never in
+#                                  Vercel env or the client bundle)
+name: Sentiment Fetch
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # every 5 min (GitHub Actions minimum; runs may be delayed)
+  workflow_dispatch: # manual trigger to test whether Myfxbook accepts GitHub's IP
+
+# If a run is still going when the next is scheduled, let the new one wait rather
+# than overlap (sessions/IPs stay clean).
+concurrency:
+  group: sentiment-fetch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Fetch sentiment and write to Supabase
+        run: node scripts/fetch-sentiment.mjs
+        env:
+          MYFXBOOK_EMAIL: ${{ secrets.MYFXBOOK_EMAIL }}
+          MYFXBOOK_PASSWORD: ${{ secrets.MYFXBOOK_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

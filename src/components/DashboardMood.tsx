@@ -1,11 +1,14 @@
 import { useMemo } from 'react';
 import { useEconomicCalendar, nextHighImpact } from '../hooks/useEconomicCalendar';
 import { computeMarketMood, moodColor, moodLabel } from '../lib/marketMood';
+import { useRetailSentiment } from '../hooks/useRetailSentiment';
+import { contrarianBias } from '../services/sentimentService';
 import { EventCountdown } from './EventCountdown';
 import { fmtAmsTime, amsZoneLabel } from '../lib/time';
 
 export function DashboardMood() {
   const cal = useEconomicCalendar();
+  const retail = useRetailSentiment();
 
   const { mood, nextHi } = useMemo(() => {
     if (cal.status !== 'ok') return { mood: null, nextHi: null };
@@ -49,6 +52,25 @@ export function DashboardMood() {
             <div className="font-sora font-700 text-[15px]" style={{ color: nextHi ? '#FF4D6D' : '#8A93A6' }}>{nextHi ? 'HIGH' : '—'}</div>
           </div>
         </div>
+        {retail.status === 'ok' && (() => {
+          const d = retail.data;
+          const bias = contrarianBias(d.shortPercentage);
+          const bc = bias === 'Bullish' ? '#00D98B' : bias === 'Bearish' ? '#FF4D6D' : '#FFC857';
+          const fmt = (v: number | null) => (v === null ? '—' : Math.round(v));
+          return (
+            <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-muted">Retail XAU/USD</span>
+              <span className="text-[11px] tnum">
+                <span className="text-greenSoft">L {fmt(d.longPercentage)}%</span>
+                <span className="text-muted/50"> / </span>
+                <span className="text-bear">S {fmt(d.shortPercentage)}%</span>
+              </span>
+              <span className="text-[10px] font-700 uppercase tracking-[0.12em]" style={{ color: bc }}>
+                {bias === 'Neutral' ? 'No edge' : `Contrarian ${bias}`}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* NEXT HIGH IMPACT EVENT */}

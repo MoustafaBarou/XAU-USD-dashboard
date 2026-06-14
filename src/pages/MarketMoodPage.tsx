@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { PageHeader } from './PageShell';
 import { useEconomicCalendar } from '../hooks/useEconomicCalendar';
 import { computeMarketMood, moodColor, moodLabel } from '../lib/marketMood';
+import { useRetailSentiment } from '../hooks/useRetailSentiment';
+import { contrarianBias, contrarianLabel } from '../services/sentimentService';
 
 export function MarketMoodPage() {
   const cal = useEconomicCalendar();
@@ -66,6 +68,91 @@ export function MarketMoodPage() {
           </div>
         </div>
       )}
+
+      {/* Retail positioning — separate data source (Myfxbook community outlook). */}
+      <div className="mt-6">
+        <RetailSentimentSection />
+      </div>
+    </div>
+  );
+}
+
+function RetailSentimentSection() {
+  const s = useRetailSentiment();
+
+  if (s.status === 'loading') {
+    return (
+      <div className="surface surface-lit p-6">
+        <div className="eyebrow mb-4">Retail Sentiment · XAU/USD</div>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted">Loading retail outlook…</div>
+      </div>
+    );
+  }
+  if (s.status === 'error') {
+    const msg = s.reason === 'no-key' ? 'Sentiment feed not connected' : `Sentiment unavailable · ${s.message}`;
+    return (
+      <div className="surface surface-lit p-6">
+        <div className="eyebrow mb-4">Retail Sentiment · XAU/USD</div>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-bear">{msg}</div>
+      </div>
+    );
+  }
+
+  const d = s.data;
+  const longPct = d.longPercentage ?? 0;
+  const shortPct = d.shortPercentage ?? 0;
+  const bias = contrarianBias(d.shortPercentage);
+  const biasColor = bias === 'Bullish' ? '#00D98B' : bias === 'Bearish' ? '#FF4D6D' : '#FFC857';
+  const biasGlyph = bias === 'Bullish' ? '▲' : bias === 'Bearish' ? '▼' : '●';
+  const fmtNum = (v: number | null, dp = 0) => (v === null ? '—' : v.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }));
+
+  return (
+    <div className="surface surface-lit p-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="eyebrow">Retail Sentiment · XAU/USD</div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-700 uppercase tracking-[0.12em]"
+          style={{ color: biasColor, background: `${biasColor}1a`, border: `1px solid ${biasColor}40` }}>
+          <span>{biasGlyph}</span>{bias === 'Neutral' ? 'No Edge' : `Contrarian ${bias}`}
+        </span>
+      </div>
+
+      {/* short (red) vs long (green) split */}
+      <div className="h-5 w-full rounded-full overflow-hidden flex bg-black/40 border border-white/10">
+        <div style={{ width: `${shortPct}%`, background: 'linear-gradient(90deg,#FF4D6D,#FF6B82)' }} className="h-full transition-all" />
+        <div style={{ width: `${longPct}%`, background: 'linear-gradient(90deg,#00B873,#00D98B)' }} className="h-full ml-auto transition-all" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-5">
+        <div className="card p-4 text-center">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Short</div>
+          <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#FF4D6D' }}>{fmtNum(d.shortPercentage, 1)}%</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted/60 mt-1 tnum">{fmtNum(d.shortPositions)} pos · {fmtNum(d.shortVolume, 2)} lots</div>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Long</div>
+          <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#00D98B' }}>{fmtNum(d.longPercentage, 1)}%</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted/60 mt-1 tnum">{fmtNum(d.longPositions)} pos · {fmtNum(d.longVolume, 2)} lots</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mt-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Avg Short</div>
+          <div className="font-sora font-700 text-[15px] text-txt2 tnum">{fmtNum(d.avgShortPrice, 2)}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Avg Long</div>
+          <div className="font-sora font-700 text-[15px] text-txt2 tnum">{fmtNum(d.avgLongPrice, 2)}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Positions</div>
+          <div className="font-sora font-700 text-[15px] text-txt2 tnum">{fmtNum(d.totalPositions)}</div>
+        </div>
+      </div>
+
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-4">
+        {contrarianLabel(d.shortPercentage, d.longPercentage)} · live retail outlook · refresh 60s
+      </p>
     </div>
   );
 }
