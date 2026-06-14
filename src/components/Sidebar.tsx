@@ -36,7 +36,7 @@ export function Sidebar({ active, onSelect }: { active: NavItem; onSelect: (s: N
           <span className="h-1.5 w-1.5 rounded-full bg-bull" style={{ boxShadow: '0 0 8px #00D98B' }} />
           <span className="tracking-wide">FEED · LIVE</span>
         </div>
-        <div className="text-muted/50 tracking-wide pl-3.5">Broker bridge · standby</div>
+        <div className="text-muted/50 tracking-wide pl-3.5 uppercase">Bridge · Standby</div>
       </div>
     </aside>
   );

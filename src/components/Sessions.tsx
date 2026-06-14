@@ -4,6 +4,9 @@ import { SESSIONS, sessionStatus, type SessionStatus } from '../data/sessions';
 const COLORS: Record<SessionStatus, string> = {
   Open: '#00D98B', Closed: '#8A93A6', Premarket: '#FFC857', 'After Hours': '#4CC9F0',
 };
+const LABEL: Record<SessionStatus, string> = {
+  Open: 'OPEN', Closed: 'CLOSED', Premarket: 'PRE-MKT', 'After Hours': 'AFT-HRS',
+};
 
 export function Sessions() {
   const [now, setNow] = useState(new Date());
@@ -16,8 +19,8 @@ export function Sessions() {
         return (
           <div key={s.name} className="flex items-center gap-2.5">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: c, boxShadow: st === 'Open' ? `0 0 9px ${c}` : 'none' }} />
-            <span className="font-sora text-[12px] font-600 text-txt2">{s.name}</span>
-            <span className="text-[10px] uppercase tracking-[0.14em] tnum" style={{ color: c }}>{st}</span>
+            <span className="font-sora text-[12px] font-600 text-txt2 uppercase tracking-wide">{s.name}</span>
+            <span className="text-[10px] uppercase tracking-[0.14em] tnum" style={{ color: c }}>{LABEL[st]}</span>
           </div>
         );
       })}

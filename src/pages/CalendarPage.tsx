@@ -13,7 +13,7 @@ const STATUS_COLOR: Record<SessionStatus, string> = {
   Open: '#4ADE80', Closed: '#8A93A6', Premarket: '#FFC857', 'After Hours': '#4CC9F0',
 };
 const STATUS_LABEL: Record<SessionStatus, string> = {
-  Open: 'OPEN', Closed: 'CLOSED', Premarket: 'PRE MARKET', 'After Hours': 'AFTER HOURS',
+  Open: 'OPEN', Closed: 'CLOSED', Premarket: 'PRE-MKT', 'After Hours': 'AFT-HRS',
 };
 const IMPACT_COLOR: Record<Impact, string> = {
   High: '#FF4D6D', Medium: '#FFC857', Low: '#FFE66D', None: '#8A93A6',
@@ -83,7 +83,7 @@ export function CalendarPage() {
     <div className="pb-10">
       <PageHeader
         title="Calendar"
-        description="Market sessions and gold-relevant events on one timeline anchored to Amsterdam time, with the live clock and a UTC reference."
+        description="Sessions · gold events · one timeline · Amsterdam time, UTC reference"
       />
 
       {/* Live clocks — Amsterdam is the primary reference, UTC secondary. */}
@@ -99,7 +99,7 @@ export function CalendarPage() {
       {/* ── SESSION TIMELINE ─────────────────────────────────────────────── */}
       <Surface className="p-6 mb-8">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <Eyebrow>Session Timeline · 24H · Europe/Amsterdam</Eyebrow>
+          <Eyebrow>Session Timeline · 24H</Eyebrow>
           <div className="flex items-center gap-4 flex-wrap">
             {sessions.map(({ def }) => (
               <span key={def.name} className="flex items-center gap-1.5 text-[11px]">
@@ -141,18 +141,18 @@ export function CalendarPage() {
       {/* ── EVENT OVERLAY (feed states + list) ───────────────────────────── */}
       <Surface className="p-6">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-          <Eyebrow>Event Overlay · Today</Eyebrow>
-          <span className="text-[11px] text-muted">High &amp; Medium impact · gold-relevant · live feed</span>
+          <Eyebrow>Events · Today</Eyebrow>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted">High / Med impact · gold-relevant</span>
         </div>
 
         {cal.status === 'loading' && (
-          <div className="text-[13px] text-muted py-4">Loading events…</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted py-4">Loading events…</div>
         )}
         {cal.status === 'error' && (
-          <div className="text-[13px] text-bear py-4">Calendar feed unavailable — {cal.message}</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-bear py-4">Calendar unavailable · {cal.message}</div>
         )}
         {cal.status === 'ok' && todayEvents.length === 0 && (
-          <div className="text-[13px] text-muted py-4">No high/medium-impact events scheduled today.</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted py-4">No high / med-impact events today</div>
         )}
         {cal.status === 'ok' && todayEvents.length > 0 && (
           <div className="space-y-1.5">

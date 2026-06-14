@@ -6,7 +6,7 @@ export function EconomicCalendarPage() {
     <div>
       <PageHeader
         title="Economic Calendar"
-        description="Live macro releases that move the market — CPI, FOMC, NFP and more — with previous, forecast and actual. Filter by day, currency and impact."
+        description="Macro releases · CPI / FOMC / NFP · prev / fcst / act · filter by day, currency, impact"
       />
       <div className="rule my-8" />
       <EconomicCalendar />

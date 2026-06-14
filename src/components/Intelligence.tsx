@@ -25,7 +25,7 @@ export function AiOverview({ g }: { g: GoldState }) {
         <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">AI Overview</h3>
         <span className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: read.live ? '#00D98B' : '#FF4D6D', boxShadow: read.live ? '0 0 8px #00D98B' : 'none' }} />
-          <Eyebrow>{read.live ? 'Live · regenerating' : 'Feed offline'}</Eyebrow>
+          <Eyebrow>{read.live ? 'Live · Regenerating' : 'Offline'}</Eyebrow>
         </span>
       </div>
 
@@ -43,8 +43,8 @@ export function AiOverview({ g }: { g: GoldState }) {
         ))}
       </div>
 
-      <div className="text-[10px] text-muted/55 mt-6 leading-relaxed max-w-3xl">
-        Generated from the live XAU/USD stream (direction, session move, momentum, range, volatility, tick cadence) blended with the Driver Matrix. No values are invented for drivers without a live feed.
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-6 leading-relaxed max-w-3xl">
+        Generated from the live XAU/USD stream · blended with the Driver Matrix · no values invented without a live feed
       </div>
     </section>
   );

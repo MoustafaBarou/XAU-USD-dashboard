@@ -58,8 +58,8 @@ export default function App() {
           <main className="flex-1 min-w-0 px-5 sm:px-10 xl:px-14 py-4 w-full">
             {renderPage()}
             <footer className="text-[11px] text-muted/50 text-center py-16 leading-relaxed max-w-2xl mx-auto">
-              AURUM · Gold Intelligence Terminal<br />
-              © {new Date().getFullYear()} AURUM. All rights reserved.
+              <span className="uppercase tracking-[0.22em]">AURUM · Gold Intelligence Terminal</span><br />
+              <span className="tnum">© {new Date().getFullYear()}</span> AURUM. All rights reserved.
             </footer>
           </main>
         </div>

@@ -118,7 +118,7 @@ export function computeGoldImpact(input: ImpactInput): GoldImpact {
 }
 
 export function biasMarker(bias: GoldBias): string {
-  return bias === 'Bullish Gold' ? '🟢' : bias === 'Bearish Gold' ? '🔴' : '⚪';
+  return bias === 'Bullish Gold' ? '▲' : bias === 'Bearish Gold' ? '▼' : '●';
 }
 
 export function biasSign(bias: GoldBias): number {

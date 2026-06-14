@@ -221,15 +221,15 @@ export function EconomicCalendar() {
 
       {/* -- Body -- */}
       <div className="surface surface-lit p-0 overflow-hidden">
-        {state.status === 'loading' && <div className="p-8 text-[13px] text-muted text-center">Loading economic calendar...</div>}
+        {state.status === 'loading' && <div className="p-8 text-[11px] uppercase tracking-[0.14em] text-muted text-center">Loading calendar…</div>}
         {state.status === 'error' && (
-          <div className="p-8 text-[13px] text-bear text-center">
-            Couldn't load the calendar ({state.message}).
-            <button onClick={load} className="ml-2 text-greenSoft hover:underline">Retry</button>
+          <div className="p-8 text-[11px] uppercase tracking-[0.14em] text-bear text-center">
+            Calendar unavailable · {state.message}
+            <button onClick={load} className="ml-2 text-greenSoft hover:underline normal-case tracking-normal">Retry</button>
           </div>
         )}
         {state.status === 'ok' && filtered.length === 0 && (
-          <div className="p-8 text-[13px] text-muted/70 text-center">No events match these filters for the selected period.</div>
+          <div className="p-8 text-[11px] uppercase tracking-[0.14em] text-muted/70 text-center">No events match the selected filters</div>
         )}
         {state.status === 'ok' && filtered.length > 0 && (
           <div className="overflow-x-auto">
@@ -261,7 +261,7 @@ export function EconomicCalendar() {
                     <span className="col-span-2 md:col-span-1 text-txt2 md:text-txt order-last md:order-none">
                       {e.event}
                       {showCountdown && (
-                        <span className="ml-2 text-[11px] text-gold">⏳ <EventCountdown target={e.date} /></span>
+                        <span className="ml-2 text-[11px] text-gold tnum"><EventCountdown target={e.date} /></span>
                       )}
                     </span>
                     <span className="tnum text-muted md:text-right"><span className="md:hidden text-[10px] uppercase mr-1">Prev</span>{e.previous ?? '-'}</span>
@@ -270,7 +270,7 @@ export function EconomicCalendar() {
                       <span className="md:hidden text-[10px] uppercase mr-1 font-400">Act</span>{e.actual ?? '-'}
                     </span>
                     <span className="flex items-center gap-1.5" title={gi.reason}>
-                      <span>{biasMarker(gi.bias)}</span>
+                      <span style={{ color: giColor }} className="text-[11px]">{biasMarker(gi.bias)}</span>
                       <span className="text-[11px] font-600" style={{ color: giColor }}>
                         {gi.bias === 'Bullish Gold' ? 'Bullish' : gi.bias === 'Bearish Gold' ? 'Bearish' : 'Neutral'}
                       </span>
@@ -283,8 +283,8 @@ export function EconomicCalendar() {
         )}
       </div>
 
-      <div className="text-[10px] text-muted/55">
-        Live economic data · times shown in Amsterdam time (CET/CEST).
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55">
+        Live economic data · Amsterdam time (CET/CEST)
       </div>
     </div>
   );

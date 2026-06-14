@@ -6,7 +6,7 @@ export function ReportsPage() {
     <div>
       <PageHeader
         title="Reports"
-        description="Performance analytics generated from your private trade journal — returns, win rate, profit factor and your equity curve."
+        description="Performance · returns · win rate · profit factor · equity curve · from your private journal"
       />
       <div className="rule my-8" />
       <Reports />

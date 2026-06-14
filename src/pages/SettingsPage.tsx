@@ -13,7 +13,7 @@ export function SettingsPage() {
     <div className="pb-12">
       <PageHeader
         title="Settings"
-        description="Display, alerts, data source and the broker feed bridge — saved to your account."
+        description="Display · alerts · data source · broker bridge · saved to your account"
       />
 
       {/* Persistence honesty banner */}
@@ -21,8 +21,8 @@ export function SettingsPage() {
         <div className="card px-4 py-3 mb-8 text-[12px] text-txt2 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-warn shrink-0" />
           {user
-            ? 'Supabase is not configured — changes apply this session only and are not saved.'
-            : 'Sign in to save your preferences to your account. Changes apply this session only until you do.'}
+            ? 'Storage not configured · changes apply this session only and are not saved.'
+            : 'Sign in to save preferences to your account · changes apply this session only until you do.'}
         </div>
       )}
 
@@ -30,10 +30,10 @@ export function SettingsPage() {
           don't leave a thin strip of settings in a sea of black. */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         {/* ── 1. DISPLAY PREFERENCES ─────────────────────────────────── */}
-        <Section eyebrow="Display Preferences" title="How prices and motion render across AURUM">
-          <Row label="Decimal precision" hint="Applied to every XAU/USD price in the app (tape, widget, header).">
+        <Section eyebrow="Display Preferences" title="Price & motion rendering">
+          <Row label="Decimal precision" hint="Applies to every XAU/USD price · tape, widget, header.">
             <Segmented
-              options={[{ v: 2, l: '2 · 0.00' }, { v: 3, l: '3 · 0.000' }]}
+              options={[{ v: 2, l: '2 (0.00)' }, { v: 3, l: '3 (0.000)' }]}
               value={prefs.decimalPrecision}
               onChange={(v) => update({ decimalPrecision: v })}
             />
@@ -50,7 +50,7 @@ export function SettingsPage() {
         <Section
           eyebrow="Alerts"
           title="In-app price & bias notifications"
-          note="Alerts fire as toasts while AURUM is open in this tab. There is no background or push delivery."
+          note="Toasts while AURUM is open in this tab · no background or push delivery."
         >
           <Row label="Price alerts" hint="Trigger when XAU/USD crosses your thresholds.">
             <Toggle on={prefs.priceAlertEnabled} onChange={(v) => update({ priceAlertEnabled: v })} />
@@ -78,7 +78,7 @@ export function SettingsPage() {
         <Section
           eyebrow="Data Source"
           title="Live XAU/USD feed provider"
-          note="The dashboard reads from the selected feed via the abstraction layer. Only genuinely available feeds can be selected — no feed is faked."
+          note="Reads from the selected feed · only genuinely available feeds are selectable · no feed is faked."
         >
           <div className="space-y-3">
             <ProviderCard
@@ -90,14 +90,14 @@ export function SettingsPage() {
               id="twelvedata" active={prefs.feedProvider === 'twelvedata'}
               name="AURUM Stream" sub="WebSocket · requires a streaming API key"
               status={TWELVEDATA_AVAILABLE ? 'connected' : 'unavailable'}
-              statusText={TWELVEDATA_AVAILABLE ? undefined : 'not connected — no API key'}
+              statusText={TWELVEDATA_AVAILABLE ? undefined : 'not connected · no API key'}
               onSelect={TWELVEDATA_AVAILABLE ? () => update({ feedProvider: 'twelvedata' }) : undefined}
             />
             <ProviderCard
               id="mt5-bridge" active={prefs.feedProvider === 'mt5-bridge'}
               name="Broker Bridge" sub="True broker bid/ask via your bridge relay"
               status={prefs.mt5BridgeUrl ? 'experimental' : 'unavailable'}
-              statusText={prefs.mt5BridgeUrl ? 'URL set · not verified' : 'not connected — set the bridge URL below'}
+              statusText={prefs.mt5BridgeUrl ? 'URL set · not verified' : 'not connected · set bridge URL below'}
               onSelect={prefs.mt5BridgeUrl ? () => update({ feedProvider: 'mt5-bridge' }) : undefined}
             />
           </div>
@@ -107,7 +107,7 @@ export function SettingsPage() {
         <Section
           eyebrow="Broker Bridge"
           title="Connect your broker feed bridge"
-          note="This is a static site, so the broker feed is reached via a WebSocket relay you host. The bridge is not running yet — enter its URL when it is live. No connection is faked."
+          note="Static site · broker feed via a WebSocket relay you host · enter its URL when live · no connection faked."
         >
           <BridgeField
             value={prefs.mt5BridgeUrl}
@@ -117,7 +117,7 @@ export function SettingsPage() {
       </div>
 
       {!loaded && persisted && (
-        <div className="text-[12px] text-muted mt-6">Loading your saved settings…</div>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted mt-6">Loading your saved settings…</div>
       )}
     </div>
   );
@@ -256,7 +256,7 @@ function BridgeField({ value, onCommit }: { value: string | null; onCommit: (url
       <div className="flex items-center gap-2 mt-3 text-[11px]">
         <span className="h-1.5 w-1.5 rounded-full" style={{ background: value ? '#FFC857' : '#8A93A6' }} />
         <span className="text-muted">
-          {value ? 'URL saved · bridge not verified — selectable under Data Source as an experimental feed.' : 'Not connected — enter the URL when your bridge is live.'}
+          {value ? 'URL saved · not verified · selectable under Data Source as experimental feed.' : 'Not connected · enter the URL when your bridge is live.'}
         </span>
       </div>
     </div>

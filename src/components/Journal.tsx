@@ -284,9 +284,9 @@ export function Journal() {
       <div className="mt-8">
         <div className="eyebrow mb-4">Trade History</div>
         {loading ? (
-          <div className="text-[12px] text-muted">Loading trades…</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted">Loading trades…</div>
         ) : rows.length === 0 ? (
-          <div className="text-[12px] text-muted/60">No trades yet. Log your first trade above.</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted/60">No trades yet · log your first above</div>
         ) : (
           <div className="space-y-2">
             {rows.map((r) => {
@@ -301,7 +301,7 @@ export function Journal() {
                     {dir && <span className="text-[10px] font-700 px-2 py-[2px] rounded-full uppercase" style={{ color: dirCol, background: `${dirCol}1a`, border: `1px solid ${dirCol}40` }}>{dir}</span>}
                     {r.setup && <span className="text-[11px] text-muted">{r.setup}</span>}
                     <span className="text-[11px] text-muted tnum">{when}</span>
-                    <span className="tnum text-txt2">In {r.entry_price ?? r.entry ?? '—'} → Out {r.exit_price ?? r.exit ?? '—'}</span>
+                    <span className="tnum text-txt2"><span className="text-[10px] uppercase tracking-[0.12em] text-muted/60">In</span> {r.entry_price ?? r.entry ?? '—'} → <span className="text-[10px] uppercase tracking-[0.12em] text-muted/60">Out</span> {r.exit_price ?? r.exit ?? '—'}</span>
                     <span className="ml-auto font-sora font-700 tnum" style={{ color: plColor(net) }}>
                       {net === null ? '—' : (net >= 0 ? '+' : '') + net}
                     </span>
@@ -316,14 +316,14 @@ export function Journal() {
             })}
           </div>
         )}
-        <div className="text-[10px] text-muted/55 mt-4">Saved securely to your account via Supabase. Only you can see these trades.</div>
+        <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-4">Saved securely to your account · only you can see these trades</div>
       </div>
     </div>
   );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="font-sora font-700 text-[13px] text-txt tracking-wide mb-3">{children}</div>;
+  return <div className="font-sora font-700 text-[11px] uppercase tracking-[0.16em] text-txt mb-3">{children}</div>;
 }
 
 function Num({ label, v, on }: { label: string; v: string; on: (v: string) => void }) {

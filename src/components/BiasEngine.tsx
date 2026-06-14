@@ -26,10 +26,10 @@ export function BiasEngine({ g, dxy, us10y }: { g: GoldState; dxy?: Quote | null
   return (
     <section className="py-2">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">Gold Bias Engine</h3>
+        <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">Bias Engine</h3>
         <span className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: bias.live ? '#4ADE80' : '#FF4D6D', boxShadow: bias.live ? '0 0 8px #4ADE80' : 'none' }} />
-          <Eyebrow>{bias.live ? `Live · ${bias.liveInputs.join(' · ')}` : 'No live data'}</Eyebrow>
+          <Eyebrow>{bias.live ? `Live · ${bias.liveInputs.join(' · ')}` : 'No Feed'}</Eyebrow>
         </span>
       </div>
 

@@ -118,16 +118,16 @@ export function Reports() {
     return { stats: s, curve: c };
   }, [rows]);
 
-  if (authLoading) return <div className="text-[12px] text-muted">Checking session…</div>;
+  if (authLoading) return <div className="text-[11px] uppercase tracking-[0.14em] text-muted">Checking session…</div>;
   if (!user) {
     return (
       <div className="card p-6 text-[13px] text-txt2/85 leading-relaxed">
-        Sign in to view your performance reports. Reports are generated from your private trade journal.
+        Sign in to view performance reports generated from your private trade journal.
       </div>
     );
   }
-  if (loading) return <div className="text-[12px] text-muted">Loading reports…</div>;
-  if (error) return <div className="text-[12px] text-bear">{error}</div>;
+  if (loading) return <div className="text-[11px] uppercase tracking-[0.14em] text-muted">Loading reports…</div>;
+  if (error) return <div className="text-[11px] uppercase tracking-[0.14em] text-bear">{error}</div>;
 
   const plColor = (v: number | null) => (v === null ? '#C5CCD8' : v >= 0 ? '#00D98B' : '#FF4D6D');
   const fmtUsd = (v: number | null) => (v === null ? '–n/a–' : `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
@@ -151,14 +151,14 @@ export function Reports() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="eyebrow">Equity Curve</div>
-            <div className="text-[11px] text-muted mt-1">Cumulative Net P/L across {stats.closedTrades} closed trades</div>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-muted mt-1">Cumulative Net P/L · <span className="tnum">{stats.closedTrades}</span> closed</div>
           </div>
           <span className="font-sora font-800 text-[18px] tnum" style={{ color: plColor(stats.netPl) }}>
             {fmtUsd(stats.netPl)}
           </span>
         </div>
         {curve.length < 2 ? (
-          <div className="text-[12px] text-muted/60 py-12 text-center">Add at least two closed trades to render the equity curve.</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted/60 py-12 text-center">Add ≥2 closed trades to render the curve</div>
         ) : (
           <EquityCurveChart data={curve} />
         )}
@@ -175,9 +175,9 @@ export function Reports() {
           <Metric label="Average R" value={stats.avgR === null ? '–n/a–' : `${stats.avgR}R`} color={plColor(stats.avgR)} />
           <Metric label="Total Return %" value={fmtPct(stats.totalReturnPct)} color={plColor(stats.totalReturnPct)} />
           <Metric label="Win Rate" value={stats.winRate === null ? '–n/a–' : `${round(stats.winRate, 1)}%`} />
-          <Metric label="Trades (closed/total)" value={`${stats.closedTrades} / ${stats.totalTrades}`} />
+          <Metric label="Trades · Closed / Total" value={`${stats.closedTrades} / ${stats.totalTrades}`} />
         </div>
-        <div className="text-[10px] text-muted/55 mt-4">All figures computed client-side from your journal entries. No data leaves your account.</div>
+        <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-4">Computed client-side from your journal · no data leaves your account</div>
       </div>
     </div>
   );

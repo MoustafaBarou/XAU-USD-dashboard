@@ -54,7 +54,7 @@ export function LiveGoldWidget() {
             </span>
           </div>
           <div className="mt-1 text-[13px] tnum" style={{ color: accent }}>
-            {fmtSigned(g.changeAbs)} {g.changeBasis === 'daily' ? 'Today' : 'this session'}
+            {fmtSigned(g.changeAbs)} <span className="text-[10px] uppercase tracking-[0.14em] text-muted/70">{g.changeBasis === 'daily' ? 'Today' : 'Session'}</span>
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export function LiveGoldWidget() {
       {/* mini live chart */}
       <div className="mt-5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] uppercase tracking-[0.14em] text-muted/70">Live · Spot</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted/70">Live · Spot · {tf}</span>
           <div className="flex gap-1">
             {(['1H', '4H', '1D'] as TF[]).map((t) => (
               <button key={t} onClick={() => setTf(t)}
@@ -107,8 +107,8 @@ export function LiveGoldWidget() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-[12px] text-muted/60">
-              {g.price === null ? 'Waiting for live feed...' : 'Building live chart from real ticks...'}
+            <div className="h-full flex items-center justify-center text-[11px] uppercase tracking-[0.14em] text-muted/60">
+              {g.price === null ? 'Awaiting Feed' : 'Building Tape'}
             </div>
           )}
         </div>

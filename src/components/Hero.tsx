@@ -46,11 +46,11 @@ export function Hero({ g }: { g: GoldState }) {
     <section className="min-h-[40vh] flex flex-col justify-center py-10">
       {/* greeting eyebrow */}
       <div className="flex items-center justify-between mb-8">
-        <div className="eyebrow">{greeting()}, Trader · Gold Intelligence Assistant</div>
+        <div className="eyebrow">{greeting()} · Gold Intelligence Terminal</div>
         {!disconnected && (
-          <div className="flex items-center gap-2 text-[12px] text-bull">
+          <div className="flex items-center gap-2 text-[12px] text-bull font-700 uppercase tracking-[0.14em]">
             <span className="h-2 w-2 rounded-full bg-bull animate-pulse" style={{ boxShadow: '0 0 10px #00D98B' }} />
-            Live · {g.direction === 'up' ? 'rising' : g.direction === 'down' ? 'falling' : 'flat'}
+            Live {g.direction === 'up' ? '▲' : g.direction === 'down' ? '▼' : '●'}
           </div>
         )}
       </div>
@@ -60,7 +60,7 @@ export function Hero({ g }: { g: GoldState }) {
         <GoldBar size={120} />
         <div className="leading-none">
           <h1 className="font-sora font-800 tracking-tight gold-text leading-[0.85]" style={{ fontSize: 'clamp(64px,9vw,128px)' }}>XAUUSD</h1>
-          <p className="text-txt2 mt-4 font-500" style={{ fontSize: 'clamp(16px,1.7vw,22px)' }}>Gold Spot vs US Dollar</p>
+          <p className="text-txt2 mt-4 font-500 uppercase tracking-[0.18em]" style={{ fontSize: 'clamp(13px,1.2vw,16px)' }}>Gold Spot · US Dollar</p>
         </div>
       </div>
 
@@ -70,16 +70,16 @@ export function Hero({ g }: { g: GoldState }) {
           <div className="flex items-center gap-3">
             <span className="h-3 w-3 rounded-full bg-bear animate-pulse" />
             <div>
-              <div className="font-sora font-800 text-bear tracking-wide leading-none" style={{ fontSize: 'clamp(30px,4.5vw,52px)' }}>NO LIVE MARKET FEED CONNECTED</div>
-              <div className="text-[14px] text-muted mt-4 max-w-2xl leading-relaxed">
-                Price updates have stopped. {g.detail ? `Reason: ${g.detail}. ` : ''}No simulated data is shown. The terminal will reconnect automatically on the next cycle.
+              <div className="font-sora font-800 text-bear tracking-wide leading-none" style={{ fontSize: 'clamp(30px,4.5vw,52px)' }}>NO LIVE FEED</div>
+              <div className="text-[12px] text-muted mt-4 max-w-2xl leading-relaxed uppercase tracking-[0.12em]">
+                Reconnecting on next cycle · No simulated data{g.detail ? ` · ${g.detail}` : ''}
               </div>
             </div>
           </div>
         </div>
       ) : (
         <div ref={flashRef} className="rounded-3xl -mx-4 px-4 py-3 transition-colors">
-          <div className="eyebrow mb-3">Current Gold Price · XAU/USD</div>
+          <div className="eyebrow mb-3">XAU/USD · Spot</div>
           <div className="flex items-end gap-7 flex-wrap">
             <motion.div key={g.price ?? 0} initial={{ opacity: 0.5, y: 5 }} animate={{ opacity: 1, y: 0 }}
               className="font-sora font-800 leading-[0.82] tnum tracking-tight"

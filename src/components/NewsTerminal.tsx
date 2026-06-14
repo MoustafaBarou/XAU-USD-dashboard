@@ -20,7 +20,7 @@ export function NewsTerminal() {
             <div className="font-sora font-600 text-[15px] text-txt mb-2">{n.headline}</div>
             <p className="text-[13px] text-txt2/85 mb-3 leading-relaxed">{n.summary}</p>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted">Gold impact</span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-muted">Gold Impact</span>
               <BiasPill bias={n.impact} />
             </div>
           </motion.div>

@@ -21,8 +21,8 @@ export function DriverMatrix() {
   return (
     <section>
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">Gold Driver Matrix</h3>
-        <Eyebrow>Always-on signal board</Eyebrow>
+        <h3 className="font-sora text-[13px] font-700 tracking-[0.16em] uppercase text-txt">Driver Matrix</h3>
+        <Eyebrow>Signal Board</Eyebrow>
       </div>
 
       <div className="hidden md:grid grid-cols-12 gap-4 pb-4 text-[10px] uppercase tracking-[0.16em] text-muted/70 border-b border-white/[0.05]">
@@ -75,8 +75,8 @@ export function DriverMatrix() {
           );
         })}
       </div>
-      <div className="text-[10px] text-muted/55 mt-4">
-        Renders from a single data model — value & delta populate live when a macro feed is connected; impact, strength and confidence are analyst readings until then.
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-4">
+        Value &amp; Δ populate on live feed · Impact / Strength / Confidence are analyst reads
       </div>
     </section>
   );

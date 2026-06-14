@@ -15,12 +15,12 @@ export function MarketMoodPage() {
     <div>
       <PageHeader
         title="Market Mood"
-        description="A live gold sentiment score distilled from today's economic calendar - inflation, jobs, growth and rate events, each scored for its directional pull on XAU/USD."
+        description="Live gold sentiment · scored from the macro calendar · inflation, jobs, growth, rates"
       />
       <div className="rule my-8" />
 
-      {cal.status === 'loading' && <div className="text-[13px] text-muted">Calculating market mood...</div>}
-      {cal.status === 'error' && <div className="text-[13px] text-bear">Couldn't load calendar data ({cal.message}).</div>}
+      {cal.status === 'loading' && <div className="text-[11px] uppercase tracking-[0.14em] text-muted">Computing market mood…</div>}
+      {cal.status === 'error' && <div className="text-[11px] uppercase tracking-[0.14em] text-bear">Calendar unavailable · {cal.message}</div>}
 
       {cal.status === 'ok' && mood && (
         <div className="space-y-6">
@@ -35,13 +35,13 @@ export function MarketMoodPage() {
                 </div>
                 <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
                   style={{ background: `${moodColor(mood.score)}1a`, border: `1px solid ${moodColor(mood.score)}44` }}>
-                  <span>{mood.score >= 60 ? '🟢' : mood.score <= 39 ? '🔴' : '🟡'}</span>
+                  <span style={{ color: moodColor(mood.score) }}>{mood.score >= 60 ? '▲' : mood.score <= 39 ? '▼' : '●'}</span>
                   <span className="font-sora font-700 text-[13px] tracking-wide" style={{ color: moodColor(mood.score) }}>
                     {moodLabel(mood.score)}
                   </span>
                 </div>
                 {mood.topReason && <p className="text-[13px] text-txt2 mt-4 leading-relaxed max-w-lg">{mood.topReason}</p>}
-                <p className="text-[11px] text-muted/60 mt-2">Based on {mood.sampleSize} scored event{mood.sampleSize === 1 ? '' : 's'} over the next 7 days.</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted/60 mt-2"><span className="tnum">{mood.sampleSize}</span> scored event{mood.sampleSize === 1 ? '' : 's'} · next 7D</p>
               </div>
             </div>
           </div>
@@ -52,16 +52,16 @@ export function MarketMoodPage() {
             <SentimentBar bullish={mood.bullishPct} bearish={mood.bearishPct} />
             <div className="grid grid-cols-2 gap-3 mt-5">
               <div className="card p-4 text-center">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bullish Gold</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bullish</div>
                 <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#00D98B' }}>{mood.bullishPct}%</div>
               </div>
               <div className="card p-4 text-center">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bearish Gold</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Bearish</div>
                 <div className="font-sora font-800 text-[24px] tnum" style={{ color: '#FF4D6D' }}>{mood.bearishPct}%</div>
               </div>
             </div>
-            <p className="text-[10px] text-muted/55 mt-4">
-              Scale: 0-39 Bearish Gold - 40-59 Neutral - 60-100 Bullish Gold. Computed client-side from live calendar data.
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-4 tnum">
+              0–39 Bearish · 40–59 Neutral · 60–100 Bullish · computed from live calendar data
             </p>
           </div>
         </div>

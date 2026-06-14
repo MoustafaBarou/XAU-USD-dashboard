@@ -11,7 +11,7 @@ export function EventCountdown({ target, className }: { target: string; classNam
   }, []);
 
   const t = new Date(target).getTime();
-  if (isNaN(t)) return <span className={className}>--:--:--</span>;
+  if (isNaN(t)) return <span className={`tnum ${className ?? ''}`}>--:--:--</span>;
 
   const diff = t - now;
   if (diff <= 0) {

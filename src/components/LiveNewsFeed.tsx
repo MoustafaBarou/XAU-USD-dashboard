@@ -43,14 +43,14 @@ export function LiveNewsFeed() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <span className="text-greenBright">📡</span>
-          <h3 className="font-sora font-700 text-[15px] text-txt tracking-wide">Live Gold &amp; Macro News</h3>
+          <span className="text-greenBright text-[12px]">●</span>
+          <h3 className="font-sora font-700 text-[15px] text-txt tracking-wide">Gold &amp; Macro News</h3>
         </div>
         <div className="flex items-center gap-3">
           {result?.ok && (
-            <span className="flex items-center gap-1.5 text-[11px] text-greenSoft">
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-greenSoft">
               <span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 7px #4ADE80' }} />
-              Live feed
+              Live Feed
             </span>
           )}
           <Eyebrow>Refresh 60s</Eyebrow>
@@ -75,15 +75,15 @@ export function LiveNewsFeed() {
         <div className="card p-6 border border-white/[0.06]">
           {result.reason === 'no-key' ? (
             <>
-              <div className="font-sora font-700 text-[15px] text-warn mb-2">News feed not yet connected</div>
+              <div className="font-sora font-700 text-[15px] text-warn mb-2">News Feed · Not Connected</div>
               <p className="text-[13px] text-txt2/85 leading-relaxed mb-3">{result.message}</p>
-              <p className="text-[12px] text-muted leading-relaxed">
-                Add a news data feed API key to a <code className="text-greenSoft">.env</code> file and rebuild. No data is shown until a real source is connected.
+              <p className="text-[11px] uppercase tracking-[0.12em] text-muted leading-relaxed">
+                No API key · add a news feed key and rebuild to enable the live feed
               </p>
             </>
           ) : (
             <>
-              <div className="font-sora font-700 text-[15px] text-bear mb-2">Couldn’t load news</div>
+              <div className="font-sora font-700 text-[15px] text-bear mb-2">News Feed · Error</div>
               <p className="text-[13px] text-txt2/85 leading-relaxed">{result.message}</p>
               <button onClick={() => load(true)}
                 className="mt-4 card card-hover px-4 py-2 text-[12px] font-600 text-txt2 transition-colors">
@@ -114,7 +114,7 @@ export function LiveNewsFeed() {
                     <span className="text-[10px] font-700 px-2.5 py-[3px] rounded-full uppercase tracking-wide"
                       style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>{n.sentiment}</span>
                     <span className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted">Impact</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em] text-muted">Impact</span>
                       <div className="h-1 w-16 rounded-full bg-white/10 overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${n.impactScore}%`, background: 'linear-gradient(90deg,#15803D,#4ADE80)' }} />
                       </div>
@@ -126,7 +126,7 @@ export function LiveNewsFeed() {
                   <div className="rounded-lg p-2.5" style={{ background: `${c}0d`, border: `1px solid ${c}26` }}>
                     <div className="flex items-center gap-1.5 mb-1">
                       <span style={{ color: c }} className="text-[11px]">✦</span>
-                      <span className="text-[9px] uppercase tracking-[0.14em] font-700" style={{ color: c }}>Expected Impact On Gold</span>
+                      <span className="text-[9px] uppercase tracking-[0.14em] font-700" style={{ color: c }}>Gold Impact</span>
                     </div>
                     <p className="text-[12px] leading-relaxed text-txt2/85">{n.reason}</p>
                   </div>
@@ -135,8 +135,8 @@ export function LiveNewsFeed() {
             })}
           </div>
           {lastUpdated && (
-            <div className="text-[10px] text-muted/60 mt-4 text-center">
-              Last updated {timeAgo(new Date(lastUpdated).toISOString())} · auto-refreshing every 60s · impact analysis is a transparent rule-based heuristic, not financial advice.
+            <div className="text-[10px] uppercase tracking-[0.12em] text-muted/60 mt-4 text-center">
+              Updated {timeAgo(new Date(lastUpdated).toISOString())} · refresh 60s · rule-based heuristic, not financial advice
             </div>
           )}
         </>

@@ -13,15 +13,15 @@ export function DashboardMood() {
   }, [cal]);
 
   if (cal.status === 'loading') {
-    return <div className="card p-5 text-[12px] text-muted">Loading market bias...</div>;
+    return <div className="card p-5 text-[11px] uppercase tracking-[0.14em] text-muted">Loading bias…</div>;
   }
   if (cal.status === 'error') {
-    return <div className="card p-5 text-[12px] text-muted">Market bias unavailable (calendar feed not reachable).</div>;
+    return <div className="card p-5 text-[11px] uppercase tracking-[0.14em] text-muted">Bias unavailable · feed offline</div>;
   }
   if (!mood) return null;
 
   const color = moodColor(mood.score);
-  const marker = mood.score >= 60 ? '🟢' : mood.score <= 39 ? '🔴' : '🟡';
+  const marker = mood.score >= 60 ? '▲' : mood.score <= 39 ? '▼' : '●';
   const confidence = Math.min(100, Math.round(Math.abs(mood.score - 50) * 2));
 
   const fmtTime = (iso: string) => fmtAmsTime(iso);
@@ -30,9 +30,9 @@ export function DashboardMood() {
     <div className="grid md:grid-cols-2 gap-4">
       {/* TODAY'S MARKET BIAS */}
       <div className="surface surface-lit p-5">
-        <div className="eyebrow mb-3">Today's Market Bias</div>
+        <div className="eyebrow mb-3">Market Bias</div>
         <div className="flex items-center gap-3">
-          <span className="text-[22px]">{marker}</span>
+          <span className="text-[20px]" style={{ color }}>{marker}</span>
           <span className="font-sora font-800 text-[24px] tracking-wide" style={{ color }}>{moodLabel(mood.score)}</span>
         </div>
         <div className="grid grid-cols-3 gap-3 mt-5">
@@ -46,18 +46,18 @@ export function DashboardMood() {
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted mb-1">Impact</div>
-            <div className="font-sora font-700 text-[15px]" style={{ color: nextHi ? '#FF4D6D' : '#8A93A6' }}>{nextHi ? 'High' : '-'}</div>
+            <div className="font-sora font-700 text-[15px]" style={{ color: nextHi ? '#FF4D6D' : '#8A93A6' }}>{nextHi ? 'HIGH' : '—'}</div>
           </div>
         </div>
       </div>
 
       {/* NEXT HIGH IMPACT EVENT */}
       <div className="surface surface-lit p-5">
-        <div className="eyebrow mb-3">Next High Impact Event</div>
+        <div className="eyebrow mb-3">Next High-Impact Event</div>
         {nextHi ? (
           <>
             <div className="flex items-center gap-2.5">
-              <span className="text-[18px]">🔴</span>
+              <span className="text-[14px]" style={{ color: '#FF4D6D' }}>●</span>
               <span className="font-sora font-800 text-[18px] text-txt">{nextHi.currency} {nextHi.event}</span>
             </div>
             <div className="text-[12px] text-muted mt-1 tnum">{fmtTime(nextHi.date)} {amsZoneLabel(nextHi.date)}</div>
@@ -77,7 +77,7 @@ export function DashboardMood() {
             </div>
           </>
         ) : (
-          <div className="text-[12px] text-muted/70 py-6 text-center">No upcoming high-impact events in the next 7 days.</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted/70 py-6 text-center">No high-impact events · next 7D</div>
         )}
       </div>
     </div>

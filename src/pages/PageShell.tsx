@@ -9,7 +9,7 @@ export function PageHeader({ title, description, badge }: { title: string; descr
         <h1 className="font-sora font-800 gold-text tracking-tight leading-none" style={{ fontSize: 'clamp(36px,5vw,64px)' }}>{title}</h1>
         {badge}
       </div>
-      <p className="text-txt2 mt-5 max-w-2xl leading-relaxed" style={{ fontSize: 'clamp(15px,1.5vw,18px)' }}>{description}</p>
+      <p className="text-muted mt-5 max-w-3xl uppercase tracking-[0.18em] font-500 leading-relaxed" style={{ fontSize: 'clamp(11px,1.05vw,13px)' }}>{description}</p>
     </header>
   );
 }
@@ -46,9 +46,9 @@ export function PagePlaceholder({
           </div>
         ))}
       </div>
-      <div className="mt-14 flex items-center gap-3 text-[12px] text-muted">
+      <div className="mt-14 flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-muted">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan" style={{ boxShadow: '0 0 8px #00E5FF' }} />
-        This module is on the AURUM roadmap. The Dashboard, News Intelligence and Journal are fully live today.
+        Module on roadmap · Dashboard / News / Journal live today
       </div>
     </div>
   );

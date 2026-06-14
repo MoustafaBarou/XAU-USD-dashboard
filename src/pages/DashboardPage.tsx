@@ -33,11 +33,11 @@ export function DashboardPage({ g, dxy, us10y, instruments }: { g: GoldState; dx
         <div className="flex items-center gap-4 min-w-0">
           <GoldBar size={56} />
           <div className="min-w-0">
-            <Eyebrow>Trading Desk · {DESK_DATE}</Eyebrow>
+            <Eyebrow>Trading Desk · <span className="tnum">{DESK_DATE}</span></Eyebrow>
             <h1 className="font-sora font-800 green-text leading-[1.05] mt-2" style={{ fontSize: 'clamp(28px,4vw,46px)' }}>
               {timeGreeting()}, {name}
             </h1>
-            <p className="text-txt2/80 mt-2.5 text-[14px]">Live gold intelligence, mechanical bias and the macro tape — at a glance.</p>
+            <p className="text-muted mt-3 text-[11px] uppercase tracking-[0.18em]">Live Spot · Mechanical Bias · Macro Tape</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">

@@ -9,7 +9,7 @@ export function MacroDeskPage() {
     <div>
       <PageHeader
         title="Macro Desk"
-        description="The structural macro picture behind XAU/USD: each driver's current state, its bias for gold, and the analyst read."
+        description="Structural drivers · state · gold bias · analyst read"
       />
       <div className="rule my-8" />
       <div>
@@ -23,7 +23,7 @@ export function MacroDeskPage() {
                 <span className="h-8 w-1 rounded-full" style={{ background: col, boxShadow: `0 0 12px ${col}66` }} />
                 <div>
                   <div className="font-sora font-700 text-[16px] text-txt">{c.title}</div>
-                  <div className="text-[12px] text-goldSoft mt-0.5">{c.status}</div>
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-goldSoft mt-0.5">{c.status}</div>
                 </div>
               </div>
               <p className="md:col-span-6 text-[14px] leading-relaxed text-txt2/85">{c.analysis}</p>
@@ -35,8 +35,8 @@ export function MacroDeskPage() {
           );
         })}
       </div>
-      <div className="text-[10px] text-muted/55 mt-6">
-        Editorial analyst readings. These map directly onto a live macro feed when one is connected.
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted/55 mt-6">
+        Analyst readings · map onto a live macro feed when connected
       </div>
     </div>
   );

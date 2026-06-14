@@ -39,11 +39,11 @@ export function LiveCalendar() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <span className="text-greenBright">🗓</span>
+          <span className="text-greenBright text-[12px]">●</span>
           <h3 className="font-sora font-700 text-[15px] text-txt tracking-wide">Upcoming Gold-Relevant Events</h3>
         </div>
         <div className="flex items-center gap-3">
-          {result?.ok && <span className="flex items-center gap-1.5 text-[11px] text-greenSoft"><span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 7px #4ADE80' }} />Live</span>}
+          {result?.ok && <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-greenSoft"><span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 7px #4ADE80' }} />Live</span>}
           <Eyebrow>Next 7 days</Eyebrow>
         </div>
       </div>
@@ -63,7 +63,7 @@ export function LiveCalendar() {
           </div>
           <p className="text-[13px] text-txt2/85 leading-relaxed">{result.message}</p>
           {result.reason === 'no-key' && (
-            <p className="text-[12px] text-muted leading-relaxed mt-3">Add the calendar data feed API key and rebuild to enable live events.</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted leading-relaxed mt-3">No API key · add a key and rebuild to enable live events</p>
           )}
           {result.reason === 'error' && (
             <button onClick={() => load(true)} className="mt-4 card card-hover px-4 py-2 text-[12px] font-600 text-txt2 transition-colors">Retry now</button>
@@ -102,7 +102,7 @@ export function LiveCalendar() {
               </motion.div>
             );
           })}
-          <div className="text-[10px] text-muted/60 mt-3 text-center">Live from Financial Modeling Prep · gold-relevant events highlighted · auto-refreshing every 5 min.</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted/60 mt-3 text-center">Live feed · gold-relevant events highlighted · refresh 5m</div>
         </div>
       )}
     </div>

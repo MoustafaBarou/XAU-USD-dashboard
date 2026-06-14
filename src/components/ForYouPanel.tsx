@@ -16,7 +16,7 @@ export function ForYouPanel() {
           <span className="text-greenBright">▦</span>
           <div>
             <h3 className="font-sora font-700 text-[16px] text-txt">For You</h3>
-            <div className="text-[11px] text-muted mt-0.5">Your pre-session market briefing</div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-muted mt-0.5">Pre-Session Briefing</div>
           </div>
         </div>
         <span className="card px-2.5 py-1 text-[10px] text-muted tracking-wide">
@@ -29,7 +29,7 @@ export function ForYouPanel() {
       </h4>
 
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-[11px] text-muted">Market Mood</span>
+        <span className="text-[10px] uppercase tracking-[0.14em] text-muted">Market Mood</span>
         <span className="text-[10px] font-700 px-2.5 py-[3px] rounded-full uppercase tracking-wide"
           style={{ color: '#FFC857', background: '#FFC8571a', border: '1px solid #FFC85740' }}>{FOR_YOU.mood}</span>
         <span className="text-[10px] font-700 px-2.5 py-[3px] rounded-full uppercase tracking-wide"
@@ -50,9 +50,9 @@ export function ForYouPanel() {
             <span className="text-greenBright text-[12px]">⇄</span>
             <span className="font-sora font-700 text-[13px] text-txt">Capital Flow</span>
           </div>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted">
+          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-muted/50" />
-            Editorial · no live feed
+            Editorial · No Feed
           </span>
         </div>
         <div className="space-y-2.5">

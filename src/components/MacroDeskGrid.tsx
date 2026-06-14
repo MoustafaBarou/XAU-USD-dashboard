@@ -25,7 +25,7 @@ function Card({ d }: { d: DriverRead }) {
           {d.available && <span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse shrink-0" style={{ boxShadow: '0 0 6px #4ADE80' }} />}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!d.available && <span className="text-[11px] text-muted/60">no feed</span>}
+          {!d.available && <span className="text-[10px] uppercase tracking-[0.12em] text-muted/60">No Feed</span>}
           <span className="text-[10px] font-700 px-2 py-[2px] rounded-full uppercase tracking-wide"
             style={{ color: bc, background: `${bc}1a`, border: `1px solid ${bc}40` }}>{d.bias}</span>
         </div>
@@ -77,7 +77,7 @@ export function MacroDeskGrid({ g, instruments }: { g: GoldState; instruments?: 
             <span className="text-greenBright">↗</span>
             <h3 className="font-sora font-700 text-[16px] text-txt">Macro Desk</h3>
           </div>
-          <div className="text-[11px] text-muted mt-0.5">Mechanical gold-bias engine</div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted mt-0.5">Mechanical Bias Engine</div>
         </div>
         <Eyebrow>XAU/USD focus</Eyebrow>
       </div>
@@ -90,8 +90,8 @@ export function MacroDeskGrid({ g, instruments }: { g: GoldState; instruments?: 
             style={{ color: cb, background: `${cb}1a`, border: `1px solid ${cb}40` }}>{composite.bias}</span>
         </div>
         <div className="flex items-center gap-4 text-[11px]">
-          <span className="text-muted">Confidence <span className="tnum text-txt2 font-700">{composite.confidence}%</span></span>
-          <span className="text-muted">Live drivers <span className="tnum text-txt2 font-700">{composite.contributors}</span></span>
+          <span className="text-muted uppercase tracking-[0.12em] text-[10px]">Confidence <span className="tnum text-txt2 font-700">{composite.confidence}%</span></span>
+          <span className="text-muted uppercase tracking-[0.12em] text-[10px]">Live Drivers <span className="tnum text-txt2 font-700">{composite.contributors}</span></span>
         </div>
       </div>
 

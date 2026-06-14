@@ -5,7 +5,7 @@ const COLORS: Record<SessionStatus, string> = {
   Open: '#4ADE80', Closed: '#8A93A6', Premarket: '#FFC857', 'After Hours': '#4CC9F0',
 };
 const LABEL: Record<SessionStatus, string> = {
-  Open: 'OPEN', Closed: 'CLOSED', Premarket: 'PRE MARKET', 'After Hours': 'AFTER HOURS',
+  Open: 'OPEN', Closed: 'CLOSED', Premarket: 'PRE-MKT', 'After Hours': 'AFT-HRS',
 };
 
 function clock(d: Date, utc: boolean) {
