@@ -67,14 +67,14 @@ export function LiveGoldWidget() {
             : <div />}
           <Stat label="High" value={fmt(g.high)} />
           <Stat label="Low" value={fmt(g.low)} />
-          <Stat label="Feed" value={g.provider === 'Twelve Data' ? 'TD WS' : 'spot'} subtle />
+          <Stat label="Feed" value={g.provider === 'Twelve Data' ? 'LIVE' : 'SPOT'} subtle />
         </div>
       </div>
 
       {/* mini live chart */}
       <div className="mt-5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] uppercase tracking-[0.14em] text-muted/70">Live ({g.provider})</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted/70">Live · Spot</span>
           <div className="flex gap-1">
             {(['1H', '4H', '1D'] as TF[]).map((t) => (
               <button key={t} onClick={() => setTf(t)}

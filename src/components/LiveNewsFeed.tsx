@@ -50,7 +50,7 @@ export function LiveNewsFeed() {
           {result?.ok && (
             <span className="flex items-center gap-1.5 text-[11px] text-greenSoft">
               <span className="h-1.5 w-1.5 rounded-full bg-greenBright animate-pulse" style={{ boxShadow: '0 0 7px #4ADE80' }} />
-              {result.provider} · live
+              Live feed
             </span>
           )}
           <Eyebrow>Refresh 60s</Eyebrow>
@@ -78,8 +78,7 @@ export function LiveNewsFeed() {
               <div className="font-sora font-700 text-[15px] text-warn mb-2">News feed not yet connected</div>
               <p className="text-[13px] text-txt2/85 leading-relaxed mb-3">{result.message}</p>
               <p className="text-[12px] text-muted leading-relaxed">
-                Get a free key at <span className="text-greenSoft">marketaux.com</span> or <span className="text-greenSoft">finnhub.io</span>,
-                then add it to a <code className="text-greenSoft">.env</code> file and rebuild. No data is shown until a real source is connected.
+                Add a news data feed API key to a <code className="text-greenSoft">.env</code> file and rebuild. No data is shown until a real source is connected.
               </p>
             </>
           ) : (

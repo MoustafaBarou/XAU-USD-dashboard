@@ -30,7 +30,7 @@ export function riskSentimentDriver(inst: InstrumentMap | null): DriverRead {
   const haveEquities = !!(spx?.available && ndx?.available);
   const haveVix = !!vix?.available;
   if (!haveEquities && !haveVix) {
-    return base('risk', 'Risk Sentiment', 'FMP');
+    return base('risk', 'Risk Sentiment', 'no live feed');
   }
 
   const spxChg = spx?.changePct ?? 0;
@@ -63,7 +63,7 @@ export function riskSentimentDriver(inst: InstrumentMap | null): DriverRead {
 
   return {
     key: 'risk', title: 'Risk Sentiment', available: true,
-    bias, strength, headline, detail, source: 'FMP (SPX/NDX/VIX)',
+    bias, strength, headline, detail, source: 'Live · SPX/NDX/VIX',
     asOf: vix?.asOf ?? spx?.asOf ?? null,
   };
 }

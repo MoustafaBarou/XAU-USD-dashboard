@@ -142,7 +142,7 @@ export function CalendarPage() {
       <Surface className="p-6">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <Eyebrow>Event Overlay · Today</Eyebrow>
-          <span className="text-[11px] text-muted">High &amp; Medium impact · gold-relevant · JBlanked feed</span>
+          <span className="text-[11px] text-muted">High &amp; Medium impact · gold-relevant · live feed</span>
         </div>
 
         {cal.status === 'loading' && (

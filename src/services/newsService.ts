@@ -220,7 +220,7 @@ async function fetchFmp(): Promise<NewsItem[]> {
       return {
         id: a.url ?? `fmp-${i}`,
         title,
-        source: a.publisher || a.site || (symbol ? `FMP · ${symbol}` : 'FMP'),
+        source: a.publisher || a.site || (symbol || 'Newswire'),
         url: a.url ?? '#',
         publishedAt: a.publishedDate ?? a.date ?? new Date().toISOString(),
         sentiment: impact.sentiment,
@@ -245,7 +245,7 @@ export async function fetchGoldNews(): Promise<NewsResult> {
   if (configured.length === 0) {
     return {
       ok: false, reason: 'no-key',
-      message: 'No news API key configured. Add VITE_MARKETAUX_API_KEY or VITE_FINNHUB_API_KEY to enable the live feed.',
+      message: 'No news API key configured. Add a news data feed key to enable the live feed.',
     };
   }
 

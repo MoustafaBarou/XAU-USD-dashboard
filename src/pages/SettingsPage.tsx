@@ -13,7 +13,7 @@ export function SettingsPage() {
     <div className="pb-12">
       <PageHeader
         title="Settings"
-        description="Display, alerts, data source and the VT Markets MT5 bridge — saved to your account."
+        description="Display, alerts, data source and the broker feed bridge — saved to your account."
       />
 
       {/* Persistence honesty banner */}
@@ -83,19 +83,19 @@ export function SettingsPage() {
           <div className="space-y-3">
             <ProviderCard
               id="gold-api" active={prefs.feedProvider === 'gold-api'}
-              name="gold-api.com" sub="Keyless XAU spot · REST poll" status="connected"
+              name="AURUM Spot" sub="Keyless XAU spot · REST poll" status="connected"
               onSelect={() => update({ feedProvider: 'gold-api' })}
             />
             <ProviderCard
               id="twelvedata" active={prefs.feedProvider === 'twelvedata'}
-              name="Twelve Data" sub="WebSocket · requires VITE_TWELVEDATA_API_KEY"
+              name="AURUM Stream" sub="WebSocket · requires a streaming API key"
               status={TWELVEDATA_AVAILABLE ? 'connected' : 'unavailable'}
               statusText={TWELVEDATA_AVAILABLE ? undefined : 'not connected — no API key'}
               onSelect={TWELVEDATA_AVAILABLE ? () => update({ feedProvider: 'twelvedata' }) : undefined}
             />
             <ProviderCard
               id="mt5-bridge" active={prefs.feedProvider === 'mt5-bridge'}
-              name="VT Markets MT5 (bridge)" sub="True broker bid/ask via your bridge relay"
+              name="Broker Bridge" sub="True broker bid/ask via your bridge relay"
               status={prefs.mt5BridgeUrl ? 'experimental' : 'unavailable'}
               statusText={prefs.mt5BridgeUrl ? 'URL set · not verified' : 'not connected — set the bridge URL below'}
               onSelect={prefs.mt5BridgeUrl ? () => update({ feedProvider: 'mt5-bridge' }) : undefined}
@@ -103,11 +103,11 @@ export function SettingsPage() {
           </div>
         </Section>
 
-        {/* ── 4. VT MARKETS MT5 BRIDGE ───────────────────────────────── */}
+        {/* ── 4. BROKER FEED BRIDGE ──────────────────────────────────── */}
         <Section
-          eyebrow="VT Markets MT5 Bridge"
-          title="Connect your MT5 feed bridge"
-          note="GitHub Pages is static, so MT5 is reached via a WebSocket relay you host. The bridge is not running yet — enter its URL when it is live. No connection is faked."
+          eyebrow="Broker Bridge"
+          title="Connect your broker feed bridge"
+          note="This is a static site, so the broker feed is reached via a WebSocket relay you host. The bridge is not running yet — enter its URL when it is live. No connection is faked."
         >
           <BridgeField
             value={prefs.mt5BridgeUrl}
@@ -241,7 +241,7 @@ function BridgeField({ value, onCommit }: { value: string | null; onCommit: (url
       <label className="text-[10px] uppercase tracking-[0.16em] text-muted">Bridge WebSocket URL</label>
       <div className="flex gap-2 mt-1.5">
         <input
-          type="text" value={text} placeholder="wss://your-mt5-bridge.example/ws"
+          type="text" value={text} placeholder="wss://your-bridge.example/ws"
           onChange={(e) => setText(e.target.value)}
           className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3.5 py-2 text-[14px] text-txt placeholder:text-muted/50 focus:border-gold/50 outline-none transition-colors"
         />

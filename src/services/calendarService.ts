@@ -33,14 +33,14 @@ function fmtDate(d: Date) { return d.toISOString().slice(0, 10); }
 
 export async function fetchEconomicCalendar(): Promise<CalendarResult> {
   if (!FMP_KEY) {
-    return { ok: false, reason: 'no-key', message: 'No FMP API key configured. Add VITE_FMP_API_KEY to enable the live economic calendar.' };
+    return { ok: false, reason: 'no-key', message: 'No calendar data feed key configured. Add the API key to enable the live economic calendar.' };
   }
   try {
     const from = new Date();
     const to = new Date(); to.setDate(to.getDate() + 7);
     const url = `${BASE}/economic_calendar?from=${fmtDate(from)}&to=${fmtDate(to)}&apikey=${FMP_KEY}`;
     const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`FMP HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`Calendar feed HTTP ${res.status}`);
     const arr = await res.json();
     if (!Array.isArray(arr)) throw new Error('Unexpected response');
 

@@ -95,12 +95,12 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       lastErr = res.status === 403
-        ? 'FMP 403 - your plan does not include the economic calendar.'
-        : `FMP HTTP ${res.status}`;
+        ? 'Economic calendar not available on the current data plan.'
+        : `Calendar feed HTTP ${res.status}`;
       continue;
     }
     const arr = await res.json();
-    if (!Array.isArray(arr)) { lastErr = 'FMP: unexpected response'; continue; }
+    if (!Array.isArray(arr)) { lastErr = 'Calendar feed: unexpected response'; continue; }
     const mapped = arr.map((e: Record<string, unknown>, i: number) => ({
       id: `${e.event ?? 'evt'}-${e.date ?? i}-${i}`,
       date: String(e.date ?? ''),
@@ -114,7 +114,7 @@ async function fetchFmp(fromISO: string, toISO: string): Promise<EconEvent[]> {
     }));
     return dedupeEvents(mapped);
   }
-  throw new Error(lastErr || 'FMP fetch failed');
+  throw new Error(lastErr || 'Calendar feed fetch failed');
 }
 
 async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[]> {
@@ -123,7 +123,7 @@ async function fetchCalendar(fromISO: string, toISO: string): Promise<EconEvent[
   catch (e) { errors.push(e instanceof Error ? e.message : 'Calendar proxy failed'); }
   if (FMP_KEY) {
     try { return await fetchFmp(fromISO, toISO); }
-    catch (e) { errors.push(e instanceof Error ? e.message : 'FMP failed'); }
+    catch (e) { errors.push(e instanceof Error ? e.message : 'Calendar feed failed'); }
   }
   throw new Error(errors.join(' - ') || 'No data source available');
 }
@@ -284,7 +284,7 @@ export function EconomicCalendar() {
       </div>
 
       <div className="text-[10px] text-muted/55">
-        Live data from JBlanked (Forex Factory) - times shown in Amsterdam time (CET/CEST).
+        Live economic data · times shown in Amsterdam time (CET/CEST).
       </div>
     </div>
   );

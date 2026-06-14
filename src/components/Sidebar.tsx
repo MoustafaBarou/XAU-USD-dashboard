@@ -34,9 +34,9 @@ export function Sidebar({ active, onSelect }: { active: NavItem; onSelect: (s: N
       <div className="px-6 py-4 border-t border-white/[0.06] text-[10px] text-muted space-y-1.5">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-bull" style={{ boxShadow: '0 0 8px #00D98B' }} />
-          <span className="tracking-wide">FEED · gold-api.com</span>
+          <span className="tracking-wide">FEED · LIVE</span>
         </div>
-        <div className="text-muted/50 tracking-wide pl-3.5">MT5 bridge · standby</div>
+        <div className="text-muted/50 tracking-wide pl-3.5">Broker bridge · standby</div>
       </div>
     </aside>
   );
