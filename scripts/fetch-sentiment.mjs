@@ -34,6 +34,14 @@ const COMMON_HEADERS = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Mask a session token for logging: keep enough to compare across attempts,
+// never reveal the full value.
+function maskSession(s) {
+  if (!s) return '(none)';
+  if (s.length <= 6) return `len=${s.length}`;
+  return `${s.slice(0, 3)}…${s.slice(-2)} (len=${s.length})`;
+}
+
 // Collect Set-Cookie(s) and reduce to a forwardable "k=v; k2=v2" string.
 function extractCookies(headers) {
   const list =
@@ -57,7 +65,13 @@ async function getJson(url, cookie) {
   } catch {
     /* not JSON (HTML, block page, etc.) */
   }
-  return { status: res.status, json, rawSnippet: text.slice(0, 300), cookies: extractCookies(res.headers) };
+  return {
+    status: res.status,
+    json,
+    rawSnippet: text.slice(0, 300),
+    contentType: res.headers.get('content-type') ?? '(none)',
+    cookies: extractCookies(res.headers),
+  };
 }
 
 async function login(email, password) {
@@ -68,7 +82,9 @@ async function login(email, password) {
     session: typeof j.session === 'string' && j.session !== '' ? j.session : null,
     cookies: f.cookies,
     status: f.status,
+    error: j.error,
     message: typeof j.message === 'string' ? j.message : '',
+    contentType: f.contentType,
     rawSnippet: f.rawSnippet,
   };
 }
@@ -86,15 +102,35 @@ const num = (v) =>
   v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v);
 
 // One login -> outlook -> XAUUSD attempt. Returns the symbol object or throws.
-async function fetchXauusd(email, password) {
+// Logs full diagnostics per stage (Actions logs are private). Never logs the
+// password or the full session token.
+async function fetchXauusd(email, password, attempt) {
+  // ── login ──
   const l = await login(email, password);
+  console.log(
+    `  [attempt ${attempt}] login: status=${l.status} error=${JSON.stringify(l.error)} ` +
+      `message=${JSON.stringify(l.message)} contentType=${l.contentType} ` +
+      `session=${maskSession(l.session)} cookie=${l.cookies ? 'present' : 'none'}`,
+  );
   if (!l.session) {
-    throw new Error(`login failed (status ${l.status}): ${l.message || l.rawSnippet || 'no session'}`);
+    // No token at all — surface the raw login body so we can see HTML/block pages.
+    console.log(`  [attempt ${attempt}] login raw body (first 300): ${JSON.stringify(l.rawSnippet)}`);
+    throw new Error(`login failed (status ${l.status}): ${l.message || 'no session token returned'}`);
   }
+
+  // ── outlook ──
   const url = `${API}/get-community-outlook.json?session=${encodeURIComponent(l.session)}`;
   const o = await getJson(url, l.cookies);
+  // ALWAYS log the outlook status, content-type, and the literal raw body
+  // (no JSON parse) so we can tell JSON-error vs HTML/block-page vs rate-limit.
+  console.log(
+    `  [attempt ${attempt}] outlook: status=${o.status} contentType=${o.contentType} ` +
+      `parsedJSON=${o.json ? 'yes' : 'no'} cookieForwarded=${l.cookies ? 'yes' : 'no'}`,
+  );
+  console.log(`  [attempt ${attempt}] outlook raw body (first 300): ${JSON.stringify(o.rawSnippet)}`);
+
   if (!o.json) {
-    throw new Error(`outlook returned non-JSON (status ${o.status}): ${o.rawSnippet}`);
+    throw new Error(`outlook returned non-JSON (status ${o.status}); see raw body above`);
   }
   if (o.json.error) {
     throw new Error(`outlook error: ${o.json.message || 'Invalid session'}`);
@@ -126,7 +162,7 @@ async function main() {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (RETRY_BACKOFF_MS[attempt - 1]) await sleep(RETRY_BACKOFF_MS[attempt - 1]);
     try {
-      symbol = await fetchXauusd(email, password);
+      symbol = await fetchXauusd(email, password, attempt);
       console.log(`Fetched XAUUSD outlook on attempt ${attempt}.`);
       break;
     } catch (e) {
